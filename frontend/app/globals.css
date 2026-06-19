@@ -1,7 +1,7 @@
+@import "leaflet/dist/leaflet.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import "leaflet/dist/leaflet.css";
 
 @layer base {
   body { @apply bg-[#FAFAF8] text-gray-900; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
