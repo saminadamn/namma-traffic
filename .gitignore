@@ -1,0 +1,40 @@
+# ── Python / Backend ───────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+venv/
+.venv/
+env/
+.env
+*.env
+
+# Alembic — keep migrations, not __pycache__ inside them
+backend/alembic/__pycache__/
+
+# ── Frontend / Node ────────────────────────────────────────────
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env.local
+frontend/.env.production
+
+# ── OS / Editor ────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+.idea/
+
+# ── CatBoost training artifacts (keep actual .pkl models) ───────
+backend/catboost_info/
+*.cbm
+
+# ── Logs ───────────────────────────────────────────────────────
+*.log
+uvicorn.log
