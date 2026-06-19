@@ -20,25 +20,28 @@ class TranslateBatchResponse(BaseModel):
     translations: list[str]
 
 
-async def _sarvam_chunk(texts: list[str], target: str, key: str) -> list[str]:
-    joined = _DELIMITER.join(texts)
+async def _sarvam_single(text: str, target: str, key: str) -> str:
     try:
         from sarvamai import AsyncSarvamAI
         client = AsyncSarvamAI(api_subscription_key=key)
         response = await client.text.translate(
-            input=joined,
+            input=text,
             source_language_code="en-IN",
             target_language_code=target,
             speaker_gender="Female",
             mode="formal",
         )
-        translated = response.translated_text or joined
-        parts = translated.split(_DELIMITER)
-        if len(parts) != len(texts):
-            parts = parts[:len(texts)] + texts[len(parts):]
-        return parts
+        return response.translated_text or text
     except Exception:
-        return texts
+        return text
+
+
+async def _sarvam_batch(texts: list[str], target: str, key: str) -> list[str]:
+    sem = asyncio.Semaphore(4)
+    async def _call(t: str) -> str:
+        async with sem:
+            return await _sarvam_single(t, target, key)
+    return list(await asyncio.gather(*[_call(t) for t in texts]))
 
 
 async def _mymemory_single(client: httpx.AsyncClient, text: str, lang_code: str) -> str:
@@ -77,14 +80,8 @@ async def translate_batch(req: TranslateBatchRequest):
 
     # Primary: Sarvam AI SDK (when key is configured)
     if settings.sarvam_api_key:
-        chunks = [req.texts[i : i + _CHUNK] for i in range(0, len(req.texts), _CHUNK)]
-        results = await asyncio.gather(
-            *[_sarvam_chunk(chunk, req.target, settings.sarvam_api_key) for chunk in chunks]
-        )
-        flat: list[str] = []
-        for r in results:
-            flat.extend(r)
-        return TranslateBatchResponse(translations=flat)
+        translations = await _sarvam_batch(req.texts, req.target, settings.sarvam_api_key)
+        return TranslateBatchResponse(translations=translations)
 
     # Fallback: MyMemory (free, no key needed)
     translations = await _mymemory_batch(req.texts, req.target)
