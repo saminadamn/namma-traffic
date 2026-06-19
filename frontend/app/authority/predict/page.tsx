@@ -2,9 +2,8 @@
 import { useState } from "react"
 import dynamic from "next/dynamic"
 import {
-  predictEvent, mlPredict, explainPrediction,
+  predictEvent, explainPrediction,
   type EventInput, type PredictionOutput, type ExplainResponse,
-  type MLPredictInput, type MLPredictOutput,
 } from "@/lib/api"
 
 const LocationPicker = dynamic(() => import("@/components/maps/LocationPicker"), { ssr: false })
@@ -88,49 +87,39 @@ function ProbBar({ pct, color }: { pct: number; color: string }) {
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function Predict() {
   const [form, setForm]     = useState<FormState>(DEFAULT)
-  const [result, setResult] = useState<PredictionOutput | null>(null)
-  const [mlResult, setML]   = useState<MLPredictOutput | null>(null)
+  const [result, setResult]   = useState<PredictionOutput | null>(null)
   const [explain, setExplain] = useState<ExplainResponse | null>(null)
   const [loading, setLoading] = useState(false)
-  const [error, setError]   = useState("")
+  const [error, setError]     = useState("")
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setForm(f => ({ ...f, [k]: v }))
 
   const submit = async () => {
-    setLoading(true); setError(""); setML(null); setExplain(null)
+    setLoading(true); setError(""); setResult(null); setExplain(null)
     try {
       const eventInput: EventInput = {
         event_type: form.event_cause,
         latitude: form.latitude, longitude: form.longitude, address: form.address,
         corridor: form.corridor, police_station: form.police_station, zone: form.zone,
         date: form.date, time: form.time, weather: form.weather, description: form.description,
-      }
-      const mlInput: MLPredictInput = {
-        event_type: form.incident_type,
-        latitude: form.latitude, longitude: form.longitude,
-        event_cause: form.event_cause,
-        authenticated: form.authenticated_reporter,
+        incident_type: form.incident_type,
         veh_type: form.veh_type || undefined,
-        start_datetime: buildStartDatetime(form.date, form.time),
-        description: form.description,
+        authenticated_reporter: form.authenticated_reporter,
       }
-      const [pred, ml, xp] = await Promise.allSettled([
+      const [pred, xp] = await Promise.allSettled([
         predictEvent(eventInput),
-        mlPredict(mlInput),
         explainPrediction(eventInput),
       ])
       if (pred.status === "fulfilled") setResult(pred.value)
-      if (ml.status   === "fulfilled") setML(ml.value)
-      if (xp.status   === "fulfilled") setExplain(xp.value)
-      if (pred.status === "rejected" && ml.status === "rejected")
-        setError("API unavailable — is the backend running?")
+      else setError("API unavailable — is the backend running?")
+      if (xp.status === "fulfilled") setExplain(xp.value)
     } finally { setLoading(false) }
   }
 
-  const riskKey = result?.risk_band as keyof typeof RISK_TX | undefined
-  const closurePct  = mlResult ? Math.round(mlResult.closure_probability * 100) : 0
-  const priorityPct = mlResult ? Math.round(mlResult.priority_probability * 100) : 0
+  const riskKey     = result?.risk_band as keyof typeof RISK_TX | undefined
+  const closurePct  = result ? Math.round(result.closure_probability * 100) : 0
+  const priorityPct = result ? Math.round(result.priority_probability * 100) : 0
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
@@ -319,7 +308,7 @@ export default function Predict() {
         <div className="space-y-3">
 
           {/* Empty state */}
-          {!mlResult && !result && !loading && (
+          {!result && !loading && (
             <div className="gov-card p-8 text-center border-dashed">
               <div className="w-10 h-10 rounded-full bg-gov-50 flex items-center justify-center mx-auto mb-3">
                 <svg className="w-5 h-5 text-gov-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -333,24 +322,23 @@ export default function Predict() {
           )}
 
           {/* ── Authority ML Score ───────────────────────────────────── */}
-          {mlResult && (
-            <div className={`gov-card p-4 border-l-4 ${mlResult.priority_prediction === "High" ? "border-l-red-500" : "border-l-emerald-500"}`}>
+          {result && (
+            <div className={`gov-card p-4 border-l-4 ${result.priority_prediction === "High" ? "border-l-red-500" : "border-l-emerald-500"}`}>
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Authority ML Score</p>
                   <p className="text-xs text-gray-500 mt-0.5">CatBoost · official model</p>
                 </div>
                 <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${
-                  mlResult.priority_prediction === "High"
+                  result.priority_prediction === "High"
                     ? "bg-red-100 text-red-700"
                     : "bg-emerald-100 text-emerald-700"
                 }`}>
-                  {mlResult.priority_prediction} Priority
+                  {result.priority_prediction} Priority
                 </span>
               </div>
 
               <div className="space-y-3">
-                {/* Road closure probability */}
                 <div>
                   <div className="flex justify-between text-[11px] mb-1.5">
                     <span className="text-gray-500">Road closure probability</span>
@@ -361,7 +349,6 @@ export default function Predict() {
                   <ProbBar pct={closurePct} color={closurePct > 50 ? "bg-red-500" : "bg-emerald-500"} />
                 </div>
 
-                {/* Priority confidence */}
                 <div>
                   <div className="flex justify-between text-[11px] mb-1.5">
                     <span className="text-gray-500">Priority confidence</span>
@@ -370,15 +357,14 @@ export default function Predict() {
                   <ProbBar pct={priorityPct} color="bg-gov-500" />
                 </div>
 
-                {/* Closure predicted */}
                 <div className="flex justify-between items-center text-[11px] pt-2 border-t border-gray-100">
                   <span className="text-gray-500">Closure predicted</span>
                   <span className={`font-medium px-2 py-0.5 rounded-full text-[10px] ${
-                    mlResult.closure_prediction
+                    result.closure_prediction
                       ? "bg-red-100 text-red-700"
                       : "bg-emerald-100 text-emerald-700"
                   }`}>
-                    {mlResult.closure_prediction ? "Yes — close road" : "No closure needed"}
+                    {result.closure_prediction ? "Yes — close road" : "No closure needed"}
                   </span>
                 </div>
               </div>

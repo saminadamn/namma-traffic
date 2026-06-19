@@ -12,22 +12,65 @@ from slowapi.util import get_remote_address
 
 limiter = Limiter(key_func=get_remote_address)
 from schemas.schemas import EventInput, PredictionOutput, IncidentCreate, VerifyAction
-from services import store, incident_service, upload_service
+from services import store, incident_service, upload_service, catboost_service, rules_engine
 from core.database import get_db
 from routers.websocket import manager
 from datetime import datetime
-import uuid, httpx
+import uuid, httpx, logging
 from config import get_settings
 
-# ── Predict ──────────────────────────────────────────────────── (UNCHANGED)
+logger = logging.getLogger("namma_traffic")
+
+# ── Predict — ML model → Business Rules Engine ────────────────────────────────
 predict_router = APIRouter()
 
 @predict_router.post("", response_model=PredictionOutput)
 async def predict_event(event: EventInput, request: Request):
-    result = request.app.state.model_service.predict(event)
+    start_datetime = f"{event.date} {event.time}:00+00"
+
+    # 1. CatBoost ML model → closure & priority probabilities
+    try:
+        ml = catboost_service.predict(
+            event_type=event.incident_type,
+            latitude=event.latitude,
+            longitude=event.longitude,
+            event_cause=event.event_type,
+            authenticated=event.authenticated_reporter,
+            veh_type=event.veh_type,
+            start_datetime=start_datetime,
+            description=event.description or "",
+        )
+    except Exception as exc:
+        logger.warning("CatBoost unavailable (%s) — using heuristic fallback", exc)
+        # Fallback: derive rough probabilities from the old model service
+        old = request.app.state.model_service.predict(event)
+        ml = {
+            "closure_probability":  old["road_closure_probability"],
+            "closure_prediction":   old["road_closure_probability"] >= 0.8,
+            "priority_probability": old["risk_score"] / 100,
+            "priority_prediction":  "High" if old["risk_score"] >= 55 else "Low",
+        }
+
+    # 2. Business Rules Engine → operational recommendations
+    bre = rules_engine.evaluate(
+        closure_probability=ml["closure_probability"],
+        closure_prediction=ml["closure_prediction"],
+        priority_probability=ml["priority_probability"],
+        priority_prediction=ml["priority_prediction"],
+        event_cause=event.event_type,
+        corridor=event.corridor,
+        weather=event.weather or "clear",
+        crowd_size=event.crowd_size,
+        date=event.date,
+        time=event.time,
+        description=event.description or "",
+    )
+
+    result = {**ml, **bre, "shap_features": []}
+
     store.PREDICTIONS.append({
         "id": str(uuid.uuid4()), "event_type": event.event_type, "address": event.address,
-        "risk_score": result["risk_score"], "risk_band": result["risk_band"],
+        "risk_score": bre["risk_score"], "risk_band": bre["risk_band"],
         "created_at": datetime.utcnow().isoformat(),
     })
     return result
