@@ -1,3 +1,9 @@
+databases:
+  - name: namma-traffic-db
+    databaseName: namma_traffic
+    user: namma_user
+    plan: free              # 90-day free Postgres on Render
+
 services:
   - type: web
     name: namma-traffic-api
@@ -7,10 +13,14 @@ services:
     startCommand: alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port $PORT
     plan: free
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.0"
       - key: DATABASE_URL
-        sync: false          # paste your Neon connection string here after deploy
+        fromDatabase:
+          name: namma-traffic-db
+          property: connectionString
       - key: JWT_SECRET_KEY
-        generateValue: true  # Render auto-generates a secure random value
+        generateValue: true     # Render generates a secure random value automatically
       - key: JWT_ALGORITHM
         value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
@@ -18,7 +28,7 @@ services:
       - key: REFRESH_TOKEN_EXPIRE_DAYS
         value: "7"
       - key: FRONTEND_URL
-        sync: false          # paste your Vercel URL after frontend deploys
+        sync: false             # fill in after Vercel deploys (e.g. https://namma-traffic.vercel.app)
       - key: GEMINI_API_KEY
         sync: false
       - key: SARVAM_API_KEY
@@ -30,4 +40,4 @@ services:
       - key: CLOUDINARY_API_SECRET
         sync: false
       - key: REDIS_URL
-        sync: false
+        sync: false             # optional – leave blank if not using Upstash
