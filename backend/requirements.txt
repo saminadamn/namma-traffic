@@ -1,21 +1,22 @@
 fastapi==0.111.0
 uvicorn[standard]==0.30.1
-pydantic==2.7.1
-pydantic-settings==2.3.0
-catboost>=1.2.0
-xgboost==2.0.3
-scikit-learn==1.5.0
-pandas==2.2.2
-numpy==1.26.4
-shap==0.45.1
+pydantic>=2.10.0
+pydantic-settings>=2.6.0
+catboost>=1.2.7
+xgboost>=2.1.0
+scikit-learn>=1.5.2
+pandas>=2.2.3
+numpy>=2.1.0
+scipy>=1.14.0
+shap>=0.46.0
 joblib==1.4.2
 python-multipart==0.0.9
 httpx==0.27.0
 
 # ── Added for Priority 1 (RBAC / auth / PostgreSQL) ──
-sqlalchemy==2.0.30
-alembic==1.13.1
-psycopg2-binary==2.9.9
+sqlalchemy>=2.0.36
+alembic>=1.13.1
+psycopg2-binary>=2.9.10
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
@@ -38,8 +39,7 @@ cloudinary>=1.36.0
 slowapi==0.1.9
 
 # ── Observability ──
-# Pin to 5.11.2 — versions >=7 drag in starlette>=1.x which breaks fastapi 0.111.0
-prometheus-fastapi-instrumentator==5.11.2
+prometheus-fastapi-instrumentator>=7.0.0
 
 # ── Redis (optional — Upstash free tier for token blacklist + perm cache) ──
 # redis>=5 ships async support natively; the [asyncio] extra no longer exists in >=5
@@ -47,3 +47,7 @@ redis>=5.0.0
 
 # ── ARQ background jobs (reverse geocoding, scheduled hotspot recalculation) ──
 arq>=0.25.0
+
+# ── astram_routing: incident-aware A* router ──
+networkx>=3.3
+osmnx>=1.9.0

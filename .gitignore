@@ -38,3 +38,7 @@ backend/catboost_info/
 # ── Logs ───────────────────────────────────────────────────────
 *.log
 uvicorn.log
+
+# ── OSMnx graph cache (large binary, regenerated on first run) ──
+backend/cache/
+*.graphml

@@ -29,6 +29,19 @@ INCIDENTS = [
      "address": "KR Circle", "corridor": "Mysore Road", "zone": "Central Zone 2", "police_station": "Cubbon Park",
      "priority": "Low", "status": "active", "requires_road_closure": False, "description": "Auto breakdown",
      "start_datetime": _ago(6)},
+    # ── Incidents along City Station → Whitefield corridor ──────────
+    {"id": _id(), "event_type": "accident", "event_cause": "accident", "latitude": 12.9780, "longitude": 77.6450,
+     "address": "Old Airport Road, Indiranagar", "corridor": "Old Airport Road", "zone": "East Zone 1", "police_station": "Indiranagar",
+     "priority": "High", "status": "active", "requires_road_closure": True, "description": "Multi-vehicle collision, road blocked",
+     "start_datetime": _ago(14)},
+    {"id": _id(), "event_type": "construction", "event_cause": "construction", "latitude": 12.9562, "longitude": 77.7008,
+     "address": "Marathahalli Bridge", "corridor": "ORR East", "zone": "East Zone 2", "police_station": "Marathahalli",
+     "priority": "High", "status": "active", "requires_road_closure": True, "description": "Bridge repair, right lane closed",
+     "start_datetime": _ago(30)},
+    {"id": _id(), "event_type": "debris", "event_cause": "debris", "latitude": 12.9690, "longitude": 77.6750,
+     "address": "HAL Airport Road", "corridor": "HAL Road", "zone": "East Zone 1", "police_station": "HAL",
+     "priority": "Medium", "status": "active", "requires_road_closure": False, "description": "Debris on road, slow traffic",
+     "start_datetime": _ago(8)},
 ]
 
 REPORTS = [

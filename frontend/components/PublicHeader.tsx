@@ -29,6 +29,7 @@ export default function PublicHeader() {
           {navLink("/citizen/heatmap", t("nav_heatmap"))}
           {navLink("/citizen/report", t("nav_report"))}
           {navLink("/citizen/track", t("nav_track"))}
+          {navLink("/citizen/route", t("nav_route"))}
           <Link href="/authority/dashboard" className="gov-btn !py-2 !px-4">
             {t("nav_authority_signin")}
           </Link>

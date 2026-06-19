@@ -134,6 +134,27 @@ export interface CommandCenterSummary {
 export interface DemoDataRequest { accidents: number; roadblocks: number; congestion_spikes: number; emergency_calls: number }
 export interface DemoDataResponse { generated_at: string; total_created: number; breakdown: Record<string, number>; incidents: Record<string, Incident[]> }
 
+// ── Safe Route ─────────────────────────────────────────────────────────
+export const getRoute = (b: RouteRequest) =>
+  api<RouteResponse>("/api/route", { method: "POST", body: JSON.stringify(b) })
+
+export interface RouteRequest {
+  origin_lat: number; origin_lon: number
+  dest_lat: number;   dest_lon: number
+}
+export interface RouteIncidentInfo {
+  id: string; event_cause: string; severity_band: string
+  requires_road_closure: boolean; latitude: number; longitude: number
+}
+export interface RouteResponse {
+  path_coords: [number, number][]
+  total_travel_time_s: number
+  total_distance_m: number
+  incidents_avoided: RouteIncidentInfo[]
+  incidents_on_route: RouteIncidentInfo[]
+  warnings: string[]
+}
+
 // ── Auth ────────────────────────────────────────────────────────────────
 export interface TokenResponse { access_token: string; refresh_token: string; token_type: string; expires_in: number }
 export interface UserOut { id: string; phone_number: string; email?: string; full_name?: string; is_active: boolean; roles: string[]; permissions: string[] }

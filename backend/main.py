@@ -8,9 +8,8 @@ import os
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-from prometheus_fastapi_instrumentator import Instrumentator
 
-from routers import api, auth, admin, websocket, explain, simulate, whatif, command_center, demo, advisory, translate
+from routers import api, auth, admin, websocket, explain, simulate, whatif, command_center, demo, advisory, translate, routing
 from services.model_service import ModelService
 
 logging.basicConfig(
@@ -71,8 +70,7 @@ app.include_router(command_center.router, prefix="/command-center",     tags=["C
 app.include_router(demo.router,           prefix="/generate-demo-data", tags=["Demo Data"])
 app.include_router(advisory.router,       prefix="/api/advisory",       tags=["Advisory"])
 app.include_router(translate.router,      prefix="/api/translate-batch", tags=["Translation"])
-
-Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+app.include_router(routing.router,        prefix="/api/route",           tags=["Safe Route"])
 
 @app.get("/health")
 def health():
