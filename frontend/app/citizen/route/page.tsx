@@ -300,16 +300,54 @@ export default function RoutePage() {
         />
       </div>
 
-      {/* Stats */}
+      {/* Safety analysis + Stats */}
       {route && (
         <>
+          {/* ── Safety verdict banner ── */}
+          {route.incidents_avoided.length > 0 ? (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-4 flex items-start gap-3">
+              <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-lg flex-shrink-0">🛡️</div>
+              <div>
+                <p className="text-sm font-semibold text-emerald-800">
+                  Safer route found — {route.incidents_avoided.length} danger zone{route.incidents_avoided.length > 1 ? "s" : ""} avoided
+                </p>
+                <p className="text-xs text-emerald-600 mt-0.5">
+                  The system compared multiple routes and chose the path with the least incident risk.
+                  {route.alternative_path_coords?.length >= 2 ? " The red dashed line on the map shows the dangerous route we rejected." : ""}
+                </p>
+              </div>
+            </div>
+          ) : route.incidents_on_route.length > 0 ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4 flex items-start gap-3">
+              <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center text-lg flex-shrink-0">⚠️</div>
+              <div>
+                <p className="text-sm font-semibold text-amber-800">
+                  No safer alternative found — {route.incidents_on_route.length} incident{route.incidents_on_route.length > 1 ? "s" : ""} on route
+                </p>
+                <p className="text-xs text-amber-600 mt-0.5">
+                  All available routes pass through active incidents. Proceed with caution and follow traffic advisories.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-4 flex items-start gap-3">
+              <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-lg flex-shrink-0">✅</div>
+              <div>
+                <p className="text-sm font-semibold text-emerald-800">Clear path — no active incidents detected</p>
+                <p className="text-xs text-emerald-600 mt-0.5">{t("route_no_incidents_desc")}</p>
+              </div>
+            </div>
+          )}
+
+          {/* ── Stats grid ── */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
             {[
-              { label: t("route_travel_time"), val: fmt(route.total_travel_time_s),  color: "text-gov-900" },
-              { label: t("route_distance"),    val: fmtKm(route.total_distance_m),   color: "text-gov-900" },
-              { label: t("route_avoided"),     val: String(route.incidents_avoided.length), color: "text-emerald-700" },
-              { label: t("route_on_route"),    val: String(route.incidents_on_route.length),
-                color: route.incidents_on_route.length > 0 ? "text-red-600" : "text-emerald-700" },
+              { label: t("route_travel_time"), val: fmt(route.total_travel_time_s), color: "text-gov-900" },
+              { label: t("route_distance"),    val: fmtKm(route.total_distance_m),  color: "text-gov-900" },
+              { label: "Zones Avoided",        val: String(route.incidents_avoided.length),
+                color: route.incidents_avoided.length > 0 ? "text-emerald-600" : "text-gray-400" },
+              { label: "On-Route Alerts",      val: String(route.incidents_on_route.length),
+                color: route.incidents_on_route.length > 0 ? "text-red-600" : "text-emerald-600" },
             ].map(s => (
               <div key={s.label} className="gov-card p-4 text-center">
                 <p className="text-[11px] text-gray-500 mb-1">{s.label}</p>
@@ -318,31 +356,66 @@ export default function RoutePage() {
             ))}
           </div>
 
-          {route.incidents_on_route.length > 0 ? (
-            <div className="gov-card p-4">
-              <p className="text-sm font-medium text-gov-900 mb-3">Incidents on your route</p>
-              <div className="space-y-2">
-                {route.incidents_on_route.map((inc: RouteIncidentInfo) => (
-                  <div key={inc.id} className="flex items-center gap-3 py-1.5 border-b border-gray-50 last:border-0">
-                    <span className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ background: inc.requires_road_closure ? "#E24B4A" : "#EF9F27" }} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-800">{inc.event_cause.replace(/_/g, " ")}</p>
-                      {inc.requires_road_closure && <p className="text-[11px] text-red-500">Road closure</p>}
-                    </div>
-                    <span className={BAND_COLOR[inc.severity_band?.toLowerCase()] ?? "badge-low"}>
-                      {inc.severity_band}
-                    </span>
+          {/* ── How the system chose this route ── */}
+          {(route.incidents_avoided.length > 0 || route.incidents_on_route.length > 0) && (
+            <div className="gov-card p-4 mb-4">
+              <p className="text-sm font-semibold text-gov-900 mb-3">Route safety breakdown</p>
+
+              {route.incidents_avoided.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide mb-2">
+                    ✓ Danger zones avoided ({route.incidents_avoided.length})
+                  </p>
+                  <div className="space-y-1.5">
+                    {route.incidents_avoided.map((inc: RouteIncidentInfo) => (
+                      <div key={inc.id} className="flex items-center gap-3 bg-emerald-50 rounded-lg px-3 py-2">
+                        <span className="text-base">🛡️</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-gray-800">{inc.event_cause.replace(/_/g, " ")}</p>
+                          {inc.requires_road_closure && <p className="text-[11px] text-red-500">Road closure — bypassed</p>}
+                        </div>
+                        <span className={BAND_COLOR[inc.severity_band?.toLowerCase()] ?? "badge-low"}>
+                          {inc.severity_band}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="gov-card p-4 text-center">
-              <p className="text-emerald-700 text-sm font-medium">✓ {t("route_no_incidents")}</p>
-              <p className="text-xs text-gray-400 mt-1">{t("route_no_incidents_desc")}</p>
+                </div>
+              )}
+
+              {route.incidents_on_route.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide mb-2">
+                    ⚠ Still on your route ({route.incidents_on_route.length})
+                  </p>
+                  <div className="space-y-1.5">
+                    {route.incidents_on_route.map((inc: RouteIncidentInfo) => (
+                      <div key={inc.id} className="flex items-center gap-3 bg-amber-50 rounded-lg px-3 py-2">
+                        <span className="text-base">⚠️</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-gray-800">{inc.event_cause.replace(/_/g, " ")}</p>
+                          {inc.requires_road_closure && <p className="text-[11px] text-red-500">Road closure</p>}
+                        </div>
+                        <span className={BAND_COLOR[inc.severity_band?.toLowerCase()] ?? "badge-low"}>
+                          {inc.severity_band}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
+
+          {/* ── Map legend explainer ── */}
+          <div className="bg-gray-50 rounded-xl p-4 text-[11px] text-gray-600 space-y-1.5">
+            <p className="font-semibold text-gray-700 text-xs mb-2">Reading the map</p>
+            <div className="flex items-center gap-2"><span className="w-5 h-0.5 bg-emerald-600 inline-block rounded" /><span>Green line — your safe route</span></div>
+            <div className="flex items-center gap-2"><span className="w-5 h-0.5 bg-amber-500 inline-block rounded" /><span>Orange line — route with unavoidable incidents</span></div>
+            <div className="flex items-center gap-2"><span className="w-5 h-0.5 bg-red-500 border-dashed border-t-2 border-red-500 inline-block" /><span>Red dashed line — dangerous route the system rejected</span></div>
+            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full border-2 border-dashed border-red-500 inline-block" /><span>Pulsing red zone — active incident area</span></div>
+            <div className="flex items-center gap-2"><span className="inline-block bg-emerald-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">✓ AVOIDED</span><span>Badge on zones the route successfully bypassed</span></div>
+          </div>
         </>
       )}
 

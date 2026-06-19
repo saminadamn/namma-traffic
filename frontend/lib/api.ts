@@ -148,6 +148,7 @@ export interface RouteIncidentInfo {
 }
 export interface RouteResponse {
   path_coords: [number, number][]
+  alternative_path_coords: [number, number][]   // the rejected dangerous route
   total_travel_time_s: number
   total_distance_m: number
   incidents_avoided: RouteIncidentInfo[]
