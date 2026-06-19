@@ -32,9 +32,8 @@ async def lifespan(app: FastAPI):
         logger.info("Database migrations applied")
     except Exception as exc:
         logger.error("Migration error (continuing): %s", exc)
-    model_service.load()
     app.state.model_service = model_service
-    logger.info("Namma Traffic API started — model_loaded=%s", model_service.is_loaded)
+    logger.info("Namma Traffic API started (models load on first predict)")
     yield
     logger.info("Namma Traffic API shutting down")
 

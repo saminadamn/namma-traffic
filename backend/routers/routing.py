@@ -35,17 +35,9 @@ def _get_router():
         from astram_routing.incidents import Incident, haversine_m, _BASE_SEVERITY
         from services.store import INCIDENTS
 
-        import os, logging
-        cache = os.path.join(os.path.dirname(__file__), "..", "cache", "bengaluru_drive.graphml")
-        cache = os.path.normpath(cache)
-        logging.getLogger("namma_traffic").info(
-            "Loading Bengaluru road graph (OSMnx) — first run downloads ~20 MB from OpenStreetMap, cache: %s", cache
-        )
-        G = load_graph(
-            backend="osmnx",
-            cache_path=cache,
-            osmnx_dist_from_point=(12.9716, 77.5946, 20_000),  # 20 km disc centred on Bengaluru
-        )
+        import logging
+        logging.getLogger("namma_traffic").info("Building synthetic Bengaluru road graph")
+        G = load_graph(backend="synthetic")
 
         class LiveIncidentStore:
             """Wraps the in-memory INCIDENTS list as an IncidentStore interface."""

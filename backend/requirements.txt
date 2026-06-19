@@ -38,9 +38,6 @@ cloudinary>=1.36.0
 # ── Rate limiting (no Redis needed) ──
 slowapi==0.1.9
 
-# ── Observability ──
-prometheus-fastapi-instrumentator>=7.0.0
-
 # ── Redis (optional — Upstash free tier for token blacklist + perm cache) ──
 # redis>=5 ships async support natively; the [asyncio] extra no longer exists in >=5
 redis>=5.0.0
@@ -50,4 +47,3 @@ arq>=0.25.0
 
 # ── astram_routing: incident-aware A* router ──
 networkx>=3.3
-osmnx>=1.9.0

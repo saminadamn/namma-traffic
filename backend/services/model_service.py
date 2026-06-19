@@ -70,12 +70,13 @@ class ModelService:
     def __init__(self):
         self.lgbm = self.xgb = self.tfidf = self.explainer = None
         self.is_loaded = False
+        self._load_attempted = False
         self.settings = get_settings()
 
     def load(self):
         try:
             import shap
-            self.lgbm = joblib.load(self.settings.model_path)   # catboost_model.pkl
+            self.lgbm = joblib.load(self.settings.model_path)
             self.xgb = joblib.load(self.settings.xgb_model_path)
             self.tfidf = joblib.load(self.settings.tfidf_path)
             self.explainer = shap.TreeExplainer(self.lgbm)
@@ -84,6 +85,11 @@ class ModelService:
         except Exception as e:
             print(f"Models not loaded ({e}) — using fallback scorer")
             self.is_loaded = False
+
+    def _ensure_loaded(self):
+        if not self._load_attempted:
+            self._load_attempted = True
+            self.load()
 
     def _features(self, ev):
         dt = datetime.strptime(f"{ev.date} {ev.time}", "%Y-%m-%d %H:%M")
@@ -111,6 +117,7 @@ class ModelService:
         return min(sum(_fallback_breakdown(ev).values()), 100)
 
     def predict(self, ev):
+        self._ensure_loaded()
         X = self._features(ev)
         if self.is_loaded:
             p = 0.55 * float(self.lgbm.predict_proba(X)[0][1]) + 0.45 * float(self.xgb.predict_proba(X)[0][1])
