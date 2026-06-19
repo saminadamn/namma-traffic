@@ -2,8 +2,8 @@
 import { useState } from "react"
 import dynamic from "next/dynamic"
 import {
-  predictEvent, explainPrediction,
-  type EventInput, type PredictionOutput, type ExplainResponse,
+  predictEvent,
+  type EventInput, type PredictionOutput,
 } from "@/lib/api"
 
 const LocationPicker = dynamic(() => import("@/components/maps/LocationPicker"), { ssr: false })
@@ -87,16 +87,15 @@ function ProbBar({ pct, color }: { pct: number; color: string }) {
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function Predict() {
   const [form, setForm]     = useState<FormState>(DEFAULT)
-  const [result, setResult]   = useState<PredictionOutput | null>(null)
-  const [explain, setExplain] = useState<ExplainResponse | null>(null)
+  const [result, setResult] = useState<PredictionOutput | null>(null)
   const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState("")
+  const [error, setError]   = useState("")
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setForm(f => ({ ...f, [k]: v }))
 
   const submit = async () => {
-    setLoading(true); setError(""); setResult(null); setExplain(null)
+    setLoading(true); setError(""); setResult(null)
     try {
       const eventInput: EventInput = {
         event_type: form.event_cause,
@@ -107,19 +106,16 @@ export default function Predict() {
         veh_type: form.veh_type || undefined,
         authenticated_reporter: form.authenticated_reporter,
       }
-      const [pred, xp] = await Promise.allSettled([
-        predictEvent(eventInput),
-        explainPrediction(eventInput),
-      ])
-      if (pred.status === "fulfilled") setResult(pred.value)
-      else setError("API unavailable — is the backend running?")
-      if (xp.status === "fulfilled") setExplain(xp.value)
+      const pred = await predictEvent(eventInput)
+      setResult(pred)
+    } catch {
+      setError("API unavailable — is the backend running?")
     } finally { setLoading(false) }
   }
 
   const riskKey     = result?.risk_band as keyof typeof RISK_TX | undefined
-  const closurePct  = result ? Math.round(result.closure_probability * 100) : 0
-  const priorityPct = result ? Math.round(result.priority_probability * 100) : 0
+  const closurePct  = result ? Math.round((result.closure_probability ?? 0) * 100) : 0
+  const priorityPct = result ? Math.round((result.priority_probability ?? 0) * 100) : 0
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
@@ -399,31 +395,6 @@ export default function Predict() {
                   ))}
                 </div>
               </div>
-
-              {/* SHAP explanation */}
-              {explain && (
-                <div className="gov-card p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs font-medium text-gov-900">Why this score</p>
-                    <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded">
-                      {explain.explanation_method === "shap_tree_explainer" ? "SHAP" : "Rule-based"}
-                    </span>
-                  </div>
-                  {explain.contributing_factors.map(f => (
-                    <div key={f.factor} className="mb-2.5">
-                      <div className="flex justify-between text-[11px] text-gray-500 mb-1">
-                        <span className="truncate pr-2">{f.factor}</span>
-                        <span className="text-gov-500 font-medium flex-shrink-0">{f.contribution_pct}%</span>
-                      </div>
-                      <ProbBar pct={Math.min(f.contribution_pct, 100)} color="bg-gov-500" />
-                    </div>
-                  ))}
-                  <div className="flex justify-between text-[11px] text-gray-500 mt-3 pt-3 border-t border-gray-100">
-                    <span>Model confidence</span>
-                    <span className="font-medium text-gov-900">{explain.confidence_pct}%</span>
-                  </div>
-                </div>
-              )}
 
               {/* Reasoning */}
               {result.reasoning.length > 0 && (

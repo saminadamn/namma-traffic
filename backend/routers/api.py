@@ -66,7 +66,13 @@ async def predict_event(event: EventInput, request: Request):
         description=event.description or "",
     )
 
-    result = {**ml, **bre, "shap_features": []}
+    result = {
+        **ml,
+        **bre,
+        "shap_features": [],
+        # backward-compat alias so any old frontend code doesn't show NaN
+        "road_closure_probability": ml["closure_probability"],
+    }
 
     store.PREDICTIONS.append({
         "id": str(uuid.uuid4()), "event_type": event.event_type, "address": event.address,
