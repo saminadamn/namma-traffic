@@ -36,8 +36,8 @@ export default function Dashboard() {
   ]
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-5">
+    <div className="p-3 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
         <div>
           <h1 className="text-base font-medium text-gov-900">Dashboard</h1>
           <p className="text-xs text-gray-400 mt-0.5">Bengaluru Traffic Police · Live operations</p>
@@ -108,7 +108,7 @@ export default function Dashboard() {
                 <span className="w-5 h-5 rounded-full bg-gov-50 text-gov-600 text-[11px] font-medium flex items-center justify-center flex-shrink-0">{i + 1}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-gray-800 truncate">{inc.address}</p>
-                  <p className="text-[11px] text-gray-400">{inc.zone} · congestion impact {inc.congestion_impact_score}% · emergency proximity {inc.emergency_proximity_score}%</p>
+                  <p className="text-[11px] text-gray-400 truncate">{inc.zone} · impact {inc.congestion_impact_score}% · proximity {inc.emergency_proximity_score}%</p>
                 </div>
                 {inc.severity_label && <span className={severityBadge(inc.severity_label)}>{inc.severity_label}</span>}
                 <span className="text-sm font-medium text-gov-900 w-12 text-right">{inc.priority_score}</span>

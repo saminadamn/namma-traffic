@@ -6,8 +6,8 @@ const CARD_CFG = [
   { key: "active_incidents",      label: "Active Incidents",       icon: "⚠",  color: "text-red-700",     bg: "bg-red-50"  },
   { key: "predicted_hotspots",    label: "Predicted Hotspots",     icon: "◉",  color: "text-amber-700",   bg: "bg-amber-50" },
   { key: "officers_available",    label: "Officers Available",     icon: "✦",  color: "text-gov-900",     bg: "bg-gov-50" },
-  { key: "emergency_routes_active", label: "Emergency Routes Active", icon: "⛌", color: "text-orange-700",  bg: "bg-orange-50" },
-  { key: "advisories_generated",  label: "AI Advisories Generated", icon: "✉",  color: "text-emerald-700", bg: "bg-emerald-50" },
+  { key: "emergency_routes_active", label: "Emergency Routes",     icon: "⛌", color: "text-orange-700",  bg: "bg-orange-50" },
+  { key: "advisories_generated",  label: "AI Advisories",          icon: "✉",  color: "text-emerald-700", bg: "bg-emerald-50" },
 ] as const
 
 function PulsingDot({ color }: { color: string }) {
@@ -48,15 +48,15 @@ export default function CommandCenter() {
   const officersPct = summary ? Math.round((summary.officers_available / summary.officers_total) * 100) : 0
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-5">
+    <div className="p-3 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
         <div>
           <h1 className="text-base font-medium text-gov-900">Executive command center</h1>
           <p className="text-xs text-gray-400 mt-0.5">Bengaluru Traffic Police · City operations overview</p>
         </div>
         <div className="flex items-center gap-3">
           {lastRefresh && (
-            <span className="text-[11px] text-gray-400">
+            <span className="text-[11px] text-gray-400 hidden sm:inline">
               Last refresh {lastRefresh.toLocaleTimeString()}
             </span>
           )}
@@ -67,20 +67,20 @@ export default function CommandCenter() {
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-5 gap-3 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
         {CARD_CFG.map(({ key, label, icon, color, bg }) => (
-          <div key={key} className={`gov-card p-4 ${bg} border-0`}>
+          <div key={key} className={`gov-card p-3 sm:p-4 ${bg} border-0`}>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-[11px] text-gray-500">{label}</p>
-              <span className="text-lg">{icon}</span>
+              <p className="text-[10px] sm:text-[11px] text-gray-500 leading-tight">{label}</p>
+              <span className="text-base sm:text-lg">{icon}</span>
             </div>
-            <p className={`text-3xl font-medium ${color}`}>{get(key as keyof CommandCenterSummary)}</p>
+            <p className={`text-2xl sm:text-3xl font-medium ${color}`}>{get(key as keyof CommandCenterSummary)}</p>
             {key === "officers_available" && summary && (
               <div className="mt-2">
                 <div className="h-1 bg-white/60 rounded">
                   <div className="h-1 rounded bg-gov-500" style={{ width: `${officersPct}%` }} />
                 </div>
-                <p className="text-[10px] text-gray-500 mt-0.5">{officersPct}% of {summary.officers_total} on standby</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">{officersPct}% of {summary.officers_total}</p>
               </div>
             )}
           </div>
@@ -88,16 +88,16 @@ export default function CommandCenter() {
       </div>
 
       {/* Control room bottom section */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* System status */}
         <div className="gov-card p-4">
           <p className="text-sm font-medium text-gov-900 mb-3">System status</p>
           <div className="space-y-2.5">
             {[
-              ["Incident pipeline",   "Operational", true],
-              ["Citizen reporting",   "Operational", true],
-              ["WebSocket broadcast", "Operational", true],
-              ["ML risk scoring",     "CatBoost ML",  true],
+              ["Incident pipeline",   "Operational",     true],
+              ["Citizen reporting",   "Operational",     true],
+              ["WebSocket broadcast", "Operational",     true],
+              ["ML risk scoring",     "CatBoost ML",     true],
               ["Advisory engine",     "BRE Operational", true],
             ].map(([system, status, ok]) => (
               <div key={system as string} className="flex items-center justify-between">
@@ -139,7 +139,7 @@ export default function CommandCenter() {
         </div>
 
         {/* Demo data generator */}
-        <div className="gov-card p-4">
+        <div className="gov-card p-4 sm:col-span-2 lg:col-span-1">
           <p className="text-sm font-medium text-gov-900 mb-1">Demo data generator</p>
           <p className="text-[11px] text-gray-400 mb-4">One click populates the system with realistic traffic events for the demo presentation.</p>
           <div className="grid grid-cols-2 gap-2 text-[11px] text-gray-500 mb-4">

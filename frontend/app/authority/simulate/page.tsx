@@ -4,9 +4,9 @@ import { simulateEvent, type SimulateEventRequest, type SimulateEventResponse } 
 
 const EVENT_TYPES: { value: SimulateEventRequest["event_type"]; label: string }[] = [
   { value: "political_rally", label: "Political Rally" },
-  { value: "concert", label: "Concert" },
-  { value: "cricket_match", label: "Cricket Match" },
-  { value: "road_closure", label: "Road Closure" },
+  { value: "concert",         label: "Concert" },
+  { value: "cricket_match",   label: "Cricket Match" },
+  { value: "road_closure",    label: "Road Closure" },
 ]
 const ZONES = ["Central Zone 1", "Central Zone 2", "North Zone 1", "North Zone 2", "South Zone 1", "South Zone 2", "West Zone 1", "East Zone 1"]
 
@@ -28,35 +28,50 @@ export default function Simulate() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-3 sm:p-6">
       <h1 className="text-base font-medium text-gov-900">Event impact simulator</h1>
       <p className="text-xs text-gray-400 mt-0.5 mb-5">Model the traffic impact of a planned event before it happens</p>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-1 gov-card p-5">
+      {/* Stacked on mobile, 3-col on lg */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-1 gov-card p-4 sm:p-5">
           <p className="text-sm font-medium text-gov-900 mb-3">Event details</p>
           <div className="space-y-3">
-            <div><label className="gov-label">Event type</label>
-              <select className="gov-input" value={eventType} onChange={e => setEventType(e.target.value as SimulateEventRequest["event_type"])}>
+            <div>
+              <label className="gov-label">Event type</label>
+              <select className="gov-input" value={eventType}
+                onChange={e => setEventType(e.target.value as SimulateEventRequest["event_type"])}>
                 {EVENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </select></div>
-            <div><label className="gov-label">Zone</label>
+              </select>
+            </div>
+            <div>
+              <label className="gov-label">Zone</label>
               <select className="gov-input" value={zone} onChange={e => setZone(e.target.value)}>
                 {ZONES.map(z => <option key={z}>{z}</option>)}
-              </select></div>
-            <div><label className="gov-label">Expected attendance</label>
-              <input className="gov-input" type="number" value={attendance ?? ""} onChange={e => setAttendance(e.target.value ? parseInt(e.target.value) : undefined)} /></div>
-            <div><label className="gov-label">Duration (hours)</label>
-              <input className="gov-input" type="number" step="0.5" value={duration ?? ""} onChange={e => setDuration(e.target.value ? parseFloat(e.target.value) : undefined)} /></div>
+              </select>
+            </div>
+            <div>
+              <label className="gov-label">Expected attendance</label>
+              <input className="gov-input" type="number" value={attendance ?? ""}
+                onChange={e => setAttendance(e.target.value ? parseInt(e.target.value) : undefined)} />
+            </div>
+            <div>
+              <label className="gov-label">Duration (hours)</label>
+              <input className="gov-input" type="number" step="0.5" value={duration ?? ""}
+                onChange={e => setDuration(e.target.value ? parseFloat(e.target.value) : undefined)} />
+            </div>
           </div>
           {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
-          <button onClick={run} disabled={loading} className="gov-btn w-full mt-4">{loading ? "Simulating…" : "Run simulation"}</button>
+          <button onClick={run} disabled={loading} className="gov-btn w-full mt-4">
+            {loading ? "Simulating…" : "Run simulation"}
+          </button>
         </div>
 
-        <div className="col-span-2 space-y-3">
+        <div className="lg:col-span-2 space-y-3">
           {result ? (
             <>
-              <div className="grid grid-cols-3 gap-3">
+              {/* Stat cards — stack on mobile, 3-col on sm */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="gov-card p-4">
                   <p className="text-[11px] text-gray-500 mb-1">Congestion increase</p>
                   <p className="text-2xl font-medium text-amber-700">+{result.expected_congestion_increase_pct}%</p>
@@ -89,7 +104,9 @@ export default function Simulate() {
               </div>
             </>
           ) : (
-            <div className="gov-card p-10 text-center text-xs text-gray-400">Run a simulation to see projected impact</div>
+            <div className="gov-card p-8 sm:p-10 text-center text-xs text-gray-400">
+              Run a simulation to see projected impact
+            </div>
           )}
         </div>
       </div>

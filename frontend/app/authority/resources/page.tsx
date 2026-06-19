@@ -21,39 +21,58 @@ export default function Resources() {
   }, { officers: 0, barricades: 0 })
 
   return (
-    <div className="p-6">
+    <div className="p-3 sm:p-6">
       <h1 className="text-base font-medium text-gov-900">Resource allocation</h1>
       <p className="text-xs text-gray-400 mt-0.5 mb-5">Recommended deployment for active incidents</p>
 
-      <div className="grid grid-cols-3 gap-3 mb-5">
-        <div className="gov-card p-4"><p className="text-[11px] text-gray-500 mb-1">Officers needed</p><p className="text-2xl font-medium text-gov-900">{totals.officers}</p></div>
-        <div className="gov-card p-4"><p className="text-[11px] text-gray-500 mb-1">Barricades needed</p><p className="text-2xl font-medium text-gov-900">{totals.barricades}</p></div>
-        <div className="gov-card p-4"><p className="text-[11px] text-gray-500 mb-1">Active incidents</p><p className="text-2xl font-medium text-amber-700">{incidents.length}</p></div>
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
+        <div className="gov-card p-3 sm:p-4">
+          <p className="text-[11px] text-gray-500 mb-1">Officers needed</p>
+          <p className="text-xl sm:text-2xl font-medium text-gov-900">{totals.officers}</p>
+        </div>
+        <div className="gov-card p-3 sm:p-4">
+          <p className="text-[11px] text-gray-500 mb-1">Barricades needed</p>
+          <p className="text-xl sm:text-2xl font-medium text-gov-900">{totals.barricades}</p>
+        </div>
+        <div className="gov-card p-3 sm:p-4">
+          <p className="text-[11px] text-gray-500 mb-1">Active incidents</p>
+          <p className="text-xl sm:text-2xl font-medium text-amber-700">{incidents.length}</p>
+        </div>
       </div>
 
-      <div className="gov-card p-4">
+      <div className="gov-card p-3 sm:p-4">
         <p className="text-sm font-medium text-gov-900 mb-3">Per-incident deployment plan</p>
-        <table className="w-full text-xs">
-          <thead><tr className="text-left text-gray-400 border-b border-gray-100">
-            <th className="py-2 font-medium">Incident</th><th className="py-2 font-medium">Location</th>
-            <th className="py-2 font-medium text-center">Officers</th><th className="py-2 font-medium text-center">Barricades</th><th className="py-2 font-medium text-center">Radius</th>
-          </tr></thead>
-          <tbody>
-            {incidents.map(inc => {
-              const p = PLAN[inc.event_cause] || { officers: 2, barricades: 1, radius: "—" }
-              return (
-                <tr key={inc.id} className="border-b border-gray-50 last:border-0">
-                  <td className="py-2.5 text-gray-800 capitalize">{inc.event_cause?.replace(/_/g, " ")}</td>
-                  <td className="py-2.5 text-gray-500">{inc.address}</td>
-                  <td className="py-2.5 text-center font-medium">{p.officers}</td>
-                  <td className="py-2.5 text-center font-medium">{p.barricades}</td>
-                  <td className="py-2.5 text-center text-gray-500">{p.radius}</td>
-                </tr>
-              )
-            })}
-            {incidents.length === 0 && <tr><td colSpan={5} className="py-6 text-center text-gray-400">No active incidents</td></tr>}
-          </tbody>
-        </table>
+        {/* overflow-x-auto prevents table from breaking layout on narrow screens */}
+        <div className="overflow-x-auto -mx-3 sm:mx-0">
+          <table className="w-full text-xs min-w-[480px]">
+            <thead>
+              <tr className="text-left text-gray-400 border-b border-gray-100">
+                <th className="py-2 font-medium pl-3 sm:pl-0">Incident</th>
+                <th className="py-2 font-medium">Location</th>
+                <th className="py-2 font-medium text-center">Officers</th>
+                <th className="py-2 font-medium text-center">Barricades</th>
+                <th className="py-2 font-medium text-center pr-3 sm:pr-0">Radius</th>
+              </tr>
+            </thead>
+            <tbody>
+              {incidents.map(inc => {
+                const p = PLAN[inc.event_cause] || { officers: 2, barricades: 1, radius: "—" }
+                return (
+                  <tr key={inc.id} className="border-b border-gray-50 last:border-0">
+                    <td className="py-2.5 text-gray-800 capitalize pl-3 sm:pl-0">{inc.event_cause?.replace(/_/g, " ")}</td>
+                    <td className="py-2.5 text-gray-500 max-w-[160px] truncate">{inc.address}</td>
+                    <td className="py-2.5 text-center font-medium">{p.officers}</td>
+                    <td className="py-2.5 text-center font-medium">{p.barricades}</td>
+                    <td className="py-2.5 text-center text-gray-500 pr-3 sm:pr-0">{p.radius}</td>
+                  </tr>
+                )
+              })}
+              {incidents.length === 0 && (
+                <tr><td colSpan={5} className="py-6 text-center text-gray-400">No active incidents</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

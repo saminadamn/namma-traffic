@@ -332,7 +332,7 @@ export default function Predict() {
           {/* ── 4. Operations ──────────────────────────────────────────── */}
           <div className="space-y-3">
             <Divider label="Operational details" />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Corridor">
                 <select className="gov-input" value={form.corridor} onChange={e => set("corridor", e.target.value)}>
                   {CORRIDORS.map(c => <option key={c}>{c}</option>)}

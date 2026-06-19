@@ -74,7 +74,7 @@ export default function Home() {
               Live · Bengaluru Traffic Intelligence
             </div>
 
-            <h1 className="text-4xl md:text-5xl font-bold text-gov-900 leading-tight tracking-tight">
+            <h1 className="text-3xl md:text-5xl font-bold text-gov-900 leading-tight tracking-tight">
               {t("hero_title_1")}
               <br />
               <span className="text-gov-500">{t("hero_title_2")}</span>
@@ -105,7 +105,7 @@ export default function Home() {
                   onBlur={() => setTimeout(() => setDropOpen(false), 180)}
                   onKeyDown={e => e.key === "Enter" && handleSearch()}
                 />
-                <button className="gov-btn !py-2 !px-4 !rounded-lg !text-xs" onClick={handleSearch}>
+                <button className="gov-btn !py-2 !px-4 !rounded-lg !text-xs flex-shrink-0" onClick={handleSearch}>
                   {t("hero_search_btn")}
                 </button>
               </div>
@@ -153,7 +153,7 @@ export default function Home() {
         </div>
 
         {/* Stats strip */}
-        <div className="max-w-6xl mx-auto px-4 pb-8 flex flex-wrap gap-8">
+        <div className="max-w-6xl mx-auto px-4 pb-8 flex flex-wrap gap-4 sm:gap-8">
           {[
             { val: "2.4M+", label: "Daily commuters served" },
             { val: "18",    label: "Traffic corridors monitored" },
@@ -174,7 +174,7 @@ export default function Home() {
       {/* ── SERVICE CARDS ─────────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-4 py-8">
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Services</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           {SERVICES.map(s => (
             <Link key={s.href} href={s.href}
               className="gov-card p-4 hover:border-gov-300 hover:shadow-sm transition-all group">
