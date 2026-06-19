@@ -94,11 +94,11 @@ export default function CommandCenter() {
           <p className="text-sm font-medium text-gov-900 mb-3">System status</p>
           <div className="space-y-2.5">
             {[
-              ["Incident pipeline", "Operational", true],
-              ["Citizen reporting", "Operational", true],
+              ["Incident pipeline",   "Operational", true],
+              ["Citizen reporting",   "Operational", true],
               ["WebSocket broadcast", "Operational", true],
-              ["ML risk scoring", "Fallback mode", false],
-              ["AI advisory engine", "Gemini + Sarvam AI", true],
+              ["ML risk scoring",     "CatBoost ML",  true],
+              ["Advisory engine",     "BRE Operational", true],
             ].map(([system, status, ok]) => (
               <div key={system as string} className="flex items-center justify-between">
                 <span className="text-xs text-gray-600">{system}</span>
