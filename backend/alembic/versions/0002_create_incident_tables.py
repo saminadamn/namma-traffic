@@ -70,9 +70,9 @@ def upgrade() -> None:
     )
 
     if use_postgis:
-        op.create_index("idx_incidents_location", "incidents", ["location"], postgresql_using="gist")
-    op.create_index("idx_incidents_lat_lon", "incidents", ["latitude", "longitude"])
-    op.create_index("ix_incidents_status_start", "incidents", ["status", "start_datetime"])
+        op.create_index("idx_incidents_location", "incidents", ["location"], postgresql_using="gist", if_not_exists=True)
+    op.create_index("idx_incidents_lat_lon", "incidents", ["latitude", "longitude"], if_not_exists=True)
+    op.create_index("ix_incidents_status_start", "incidents", ["status", "start_datetime"], if_not_exists=True)
 
     op.create_table(
         "citizen_reports",
@@ -91,8 +91,8 @@ def upgrade() -> None:
         sa.Column("verified_by_id", sa.Uuid, sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
-    op.create_index("ix_citizen_reports_tracking_id", "citizen_reports", ["tracking_id"])
-    op.create_index("ix_citizen_reports_status", "citizen_reports", ["status"])
+    op.create_index("ix_citizen_reports_tracking_id", "citizen_reports", ["tracking_id"], if_not_exists=True)
+    op.create_index("ix_citizen_reports_status", "citizen_reports", ["status"], if_not_exists=True)
 
     incident_types_table = sa.table(
         "incident_types", sa.column("id", sa.Integer), sa.column("code", sa.String), sa.column("label", sa.String)
