@@ -11,7 +11,7 @@ from slowapi.errors import RateLimitExceeded
 
 from alembic.config import Config as AlembicConfig
 from alembic import command as alembic_command
-from routers import api, auth, admin, websocket, explain, simulate, whatif, command_center, demo, advisory, translate, routing
+from routers import api, auth, admin, websocket, explain, simulate, whatif, command_center, demo, advisory, translate, routing, ml_predict
 from services.model_service import ModelService
 
 logging.basicConfig(
@@ -80,6 +80,7 @@ app.include_router(demo.router,           prefix="/generate-demo-data", tags=["D
 app.include_router(advisory.router,       prefix="/api/advisory",       tags=["Advisory"])
 app.include_router(translate.router,      prefix="/api/translate-batch", tags=["Translation"])
 app.include_router(routing.router,        prefix="/api/route",           tags=["Safe Route"])
+app.include_router(ml_predict.router,    prefix="/api/ml-predict",      tags=["Authority ML Predict"])
 
 @app.get("/health")
 def health():

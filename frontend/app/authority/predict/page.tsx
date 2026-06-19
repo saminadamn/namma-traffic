@@ -1,21 +1,28 @@
 "use client"
 import { useState } from "react"
-import { predictEvent, explainPrediction, type EventInput, type PredictionOutput, type ExplainResponse } from "@/lib/api"
+import { predictEvent, mlPredict, explainPrediction, type EventInput, type PredictionOutput, type ExplainResponse, type MLPredictInput, type MLPredictOutput } from "@/lib/api"
 
 const RISK_BG = { Low: "bg-emerald-50 border-emerald-200", Moderate: "bg-amber-50 border-amber-200", High: "bg-orange-50 border-orange-200", Critical: "bg-red-50 border-red-200" } as const
 const RISK_TX = { Low: "text-emerald-700", Moderate: "text-amber-700", High: "text-orange-700", Critical: "text-red-700" } as const
-const RISK_DOT = { Low: "bg-emerald-500", Moderate: "bg-amber-500", High: "bg-orange-500", Critical: "bg-red-500" } as const
 
 const CORRIDORS = ["Hosur Road","Bellary Road","ORR North","Outer Ring Road","Mysore Road","Tumkur Road","MG Road","Old Airport Road"]
 const ZONES     = ["Central Zone 1","Central Zone 2","North Zone 1","North Zone 2","South Zone 1","South Zone 2","West Zone 1","East Zone 1"]
 const STATIONS  = ["Upparpet","Shivajinagar","Malleshwaram","Indiranagar","Koramangala","Jayanagar","Yeshwanthpura","Hebbal","Sadashivanagar","Madiwala"]
-const TYPES     = ["public_event","vehicle_breakdown","procession","vip_movement","protest","construction","accident","water_logging","tree_fall","debris"]
+const CAUSES    = ["public_event","vehicle_breakdown","procession","vip_movement","protest","construction","accident","water_logging","tree_fall","debris"]
 const WEATHER   = ["clear","light_rain","rain","heavy_rain"]
+const VEH_TYPES = ["","auto","bmtc_bus","heavy_vehicle","ksrtc_bus","lcv","others","private_bus","private_car","taxi","truck"]
 
-const DEFAULT: EventInput = {
-  event_type: "public_event", latitude: 13.0108, longitude: 77.5858, address: "Mekhri Circle",
+interface FormState extends EventInput {
+  incident_type: "planned" | "unplanned"
+  veh_type: string
+  authenticated_reporter: boolean
+}
+
+const DEFAULT: FormState = {
+  event_type: "vehicle_breakdown", latitude: 13.0108, longitude: 77.5858, address: "Mekhri Circle",
   corridor: "Bellary Road", police_station: "Sadashivanagar", zone: "Central Zone 1",
-  date: new Date().toISOString().slice(0, 10), time: "17:30", crowd_size: 5000, weather: "clear", description: "",
+  date: new Date().toISOString().slice(0, 10), time: "17:30", crowd_size: undefined, weather: "clear", description: "",
+  incident_type: "unplanned", veh_type: "", authenticated_reporter: true,
 }
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -25,21 +32,52 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
   </div>
 )
 
+function buildStartDatetime(date: string, time: string): string {
+  return `${date} ${time}:00+00`
+}
+
 export default function Predict() {
-  const [form, setForm]           = useState<EventInput>(DEFAULT)
+  const [form, setForm]           = useState<FormState>(DEFAULT)
   const [result, setResult]       = useState<PredictionOutput | null>(null)
+  const [mlResult, setMlResult]   = useState<MLPredictOutput | null>(null)
   const [explanation, setExplanation] = useState<ExplainResponse | null>(null)
   const [loading, setLoading]     = useState(false)
   const [error, setError]         = useState("")
-  const set = (k: keyof EventInput, v: any) => setForm(f => ({ ...f, [k]: v }))
+  const set = (k: keyof FormState, v: any) => setForm(f => ({ ...f, [k]: v }))
 
   const submit = async () => {
-    setLoading(true); setError(""); setExplanation(null)
+    setLoading(true); setError(""); setExplanation(null); setMlResult(null)
     try {
-      const [pred, explain] = await Promise.all([predictEvent(form), explainPrediction(form)])
-      setResult(pred); setExplanation(explain)
-    } catch { setError("API unavailable — is the backend running?") }
-    finally { setLoading(false) }
+      const eventInput: EventInput = {
+        event_type: form.event_type, latitude: form.latitude, longitude: form.longitude,
+        address: form.address, corridor: form.corridor, police_station: form.police_station,
+        zone: form.zone, date: form.date, time: form.time, crowd_size: form.crowd_size,
+        weather: form.weather, description: form.description,
+      }
+      const mlInput: MLPredictInput = {
+        event_type: form.incident_type,
+        latitude: form.latitude,
+        longitude: form.longitude,
+        event_cause: form.event_type,
+        authenticated: form.authenticated_reporter,
+        veh_type: form.veh_type || undefined,
+        start_datetime: buildStartDatetime(form.date, form.time),
+        description: form.description,
+      }
+
+      const [pred, ml, explain] = await Promise.allSettled([
+        predictEvent(eventInput),
+        mlPredict(mlInput),
+        explainPrediction(eventInput),
+      ])
+
+      if (pred.status === "fulfilled") setResult(pred.value)
+      if (ml.status === "fulfilled")   setMlResult(ml.value)
+      if (explain.status === "fulfilled") setExplanation(explain.value)
+
+      if (pred.status === "rejected" && ml.status === "rejected")
+        setError("API unavailable — is the backend running?")
+    } finally { setLoading(false) }
   }
 
   const riskKey = result?.risk_band as keyof typeof RISK_BG | undefined
@@ -54,9 +92,23 @@ export default function Predict() {
         <div className="lg:col-span-2 gov-card p-4 sm:p-5">
           <p className="text-sm font-medium text-gov-900 mb-4">Event details</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Event type">
+
+            {/* ML model required fields */}
+            <Field label="Incident classification">
+              <select className="gov-input" value={form.incident_type} onChange={e => set("incident_type", e.target.value as "planned" | "unplanned")}>
+                <option value="unplanned">Unplanned</option>
+                <option value="planned">Planned</option>
+              </select>
+            </Field>
+            <Field label="Event cause">
               <select className="gov-input" value={form.event_type} onChange={e => set("event_type", e.target.value)}>
-                {TYPES.map(t => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
+                {CAUSES.map(t => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
+              </select>
+            </Field>
+            <Field label="Vehicle type">
+              <select className="gov-input" value={form.veh_type} onChange={e => set("veh_type", e.target.value)}>
+                <option value="">— not applicable —</option>
+                {VEH_TYPES.filter(v => v).map(v => <option key={v} value={v}>{v.replace(/_/g, " ")}</option>)}
               </select>
             </Field>
             <Field label="Address">
@@ -89,19 +141,30 @@ export default function Predict() {
                 {STATIONS.map(s => <option key={s}>{s}</option>)}
               </select>
             </Field>
-            <Field label="Crowd size">
-              <input className="gov-input" type="number" value={form.crowd_size || ""} onChange={e => set("crowd_size", parseInt(e.target.value))} />
-            </Field>
             <Field label="Weather">
               <select className="gov-input" value={form.weather} onChange={e => set("weather", e.target.value)}>
                 {WEATHER.map(w => <option key={w} value={w}>{w.replace(/_/g, " ")}</option>)}
               </select>
             </Field>
           </div>
+
+          {/* Authenticated reporter toggle */}
+          <div className="mt-3 flex items-center gap-2">
+            <input
+              id="auth-check" type="checkbox" className="w-4 h-4 accent-gov-600"
+              checked={form.authenticated_reporter}
+              onChange={e => set("authenticated_reporter", e.target.checked)}
+            />
+            <label htmlFor="auth-check" className="text-xs text-gray-600 cursor-pointer select-none">
+              Authenticated reporter (verified authority account)
+            </label>
+          </div>
+
           <div className="mt-3">
-            <label className="gov-label">Description (optional)</label>
+            <label className="gov-label">Description (optional — helps vehicle type detection)</label>
             <textarea className="gov-input h-16 resize-none" value={form.description} onChange={e => set("description", e.target.value)} />
           </div>
+
           {error && <p className="text-xs text-red-600 mt-2 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
           <button onClick={submit} disabled={loading} className="gov-btn w-full mt-4 py-2.5 flex items-center justify-center gap-2">
             {loading
@@ -113,9 +176,57 @@ export default function Predict() {
 
         {/* ── Results ── */}
         <div className="space-y-3">
-          {result && riskKey ? (
+          {/* Authority ML Score — shown first */}
+          {mlResult ? (
+            <div className={`gov-card p-4 border-l-4 ${mlResult.priority_prediction === "High" ? "border-l-red-500" : "border-l-emerald-500"}`}>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[11px] text-gray-400 uppercase tracking-wide font-medium">Authority ML Score</p>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${mlResult.priority_prediction === "High" ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
+                  {mlResult.priority_prediction} Priority
+                </span>
+              </div>
+              <div className="space-y-2.5">
+                <div>
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>Road closure probability</span>
+                    <span className={`font-semibold ${mlResult.closure_probability > 0.5 ? "text-red-600" : "text-emerald-600"}`}>
+                      {Math.round(mlResult.closure_probability * 100)}%
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-gray-100 rounded-full">
+                    <div
+                      className={`h-1.5 rounded-full transition-all ${mlResult.closure_probability > 0.5 ? "bg-red-500" : "bg-emerald-500"}`}
+                      style={{ width: `${Math.round(mlResult.closure_probability * 100)}%` }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>Priority confidence</span>
+                    <span className="font-semibold text-gov-700">{Math.round(mlResult.priority_probability * 100)}%</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-100 rounded-full">
+                    <div className="h-1.5 rounded-full bg-gov-500 transition-all" style={{ width: `${Math.round(mlResult.priority_probability * 100)}%` }} />
+                  </div>
+                </div>
+                <div className="flex justify-between text-xs pt-1 border-t border-gray-100">
+                  <span className="text-gray-500">Closure predicted</span>
+                  <span className={`font-medium ${mlResult.closure_prediction ? "text-red-600" : "text-emerald-600"}`}>
+                    {mlResult.closure_prediction ? "Yes" : "No"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : !loading && (
+            <div className="gov-card p-4 text-center text-xs text-gray-400 border-dashed">
+              <p className="font-medium text-gray-500 mb-1">No prediction yet</p>
+              <p>Fill in the event details and run the prediction</p>
+            </div>
+          )}
+
+          {/* Existing risk score card */}
+          {result && riskKey && (
             <>
-              {/* Risk score card */}
               <div className={`gov-card p-4 border-l-4 ${
                 riskKey === "Low" ? "border-l-emerald-500" :
                 riskKey === "Moderate" ? "border-l-amber-500" :
@@ -124,7 +235,10 @@ export default function Predict() {
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <p className="text-[11px] text-gray-400 uppercase tracking-wide">Risk score</p>
-                    <p className={`text-4xl font-semibold mt-0.5 ${RISK_TX[riskKey]}`}>{result.risk_score}</p>
+                    <p className={`text-4xl font-semibold mt-0.5 ${
+                      riskKey === "Low" ? "text-emerald-700" : riskKey === "Moderate" ? "text-amber-700" :
+                      riskKey === "High" ? "text-orange-700" : "text-red-700"
+                    }`}>{result.risk_score}</p>
                   </div>
                   <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${RISK_BG[riskKey]} ${RISK_TX[riskKey]}`}>
                     {result.risk_band}
@@ -188,11 +302,6 @@ export default function Predict() {
                 </div>
               )}
             </>
-          ) : (
-            <div className="gov-card p-8 text-center text-xs text-gray-400 border-dashed">
-              <p className="font-medium text-gray-500 mb-1">No prediction yet</p>
-              <p>Fill in the event details and run the prediction</p>
-            </div>
           )}
         </div>
       </div>

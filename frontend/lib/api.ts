@@ -134,6 +134,27 @@ export interface CommandCenterSummary {
 export interface DemoDataRequest { accidents: number; roadblocks: number; congestion_spikes: number; emergency_calls: number }
 export interface DemoDataResponse { generated_at: string; total_created: number; breakdown: Record<string, number>; incidents: Record<string, Incident[]> }
 
+// ── Authority ML Predict ───────────────────────────────────────────────
+export const mlPredict = (b: MLPredictInput) =>
+  api<MLPredictOutput>("/api/ml-predict", { method: "POST", body: JSON.stringify(b) })
+
+export interface MLPredictInput {
+  event_type: string        // "planned" | "unplanned"
+  latitude: number
+  longitude: number
+  event_cause: string
+  authenticated: boolean
+  veh_type?: string
+  start_datetime: string    // "YYYY-MM-DD HH:MM:SS+00"
+  description?: string
+}
+export interface MLPredictOutput {
+  closure_probability: number
+  closure_prediction: boolean
+  priority_probability: number
+  priority_prediction: "High" | "Low"
+}
+
 // ── Safe Route ─────────────────────────────────────────────────────────
 export const getRoute = (b: RouteRequest) =>
   api<RouteResponse>("/api/route", { method: "POST", body: JSON.stringify(b) })
