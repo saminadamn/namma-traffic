@@ -468,7 +468,7 @@ export default function Predict() {
                     ["Officers required", result.officers_required],
                     ["Barricades",        result.barricades_required],
                     ["Priority level",    result.monitoring_priority],
-                    ["Closure prob.",     `${Math.round(result.road_closure_probability * 100)}%`],
+                    ["Closure prob.",     `${Math.round((result.closure_probability ?? 0) * 100)}%`],
                     ["Diversion",         result.diversion_required ? "Required" : "Not needed"],
                   ] as [string, string | number][]).map(([k, v]) => (
                     <div key={k} className="flex justify-between items-center text-[11px]">
