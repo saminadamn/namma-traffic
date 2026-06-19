@@ -1,88 +1,36 @@
 """
 routing.py
 ----------
-Incident-aware safe-route endpoint backed by the astram_routing library.
-Uses the real Bengaluru OSM road network (downloaded via OSMnx on first
-request, cached to cache/bengaluru_drive.graphml for subsequent runs).
-Incidents are sourced from the live in-memory INCIDENTS store.
+Incident-aware safe-route endpoint using OSRM public demo server.
+Offloads all graph routing to http://router.project-osrm.org — zero local RAM.
+Incidents within 500m of the returned path are flagged from the live store.
 """
 from __future__ import annotations
 
-import threading
-from datetime import datetime, timezone
+import math
 
+import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 router = APIRouter()
 
-# ---------------------------------------------------------------------------
-# Singleton router (built lazily on first request)
-# ---------------------------------------------------------------------------
-_lock = threading.Lock()
-_incident_router = None
+_OSRM = "http://router.project-osrm.org/route/v1/driving/{lon1},{lat1};{lon2},{lat2}"
+_INCIDENT_RADIUS_M = 500
 
 
-def _get_router():
-    global _incident_router
-    if _incident_router is not None:
-        return _incident_router
-    with _lock:
-        if _incident_router is not None:
-            return _incident_router
-
-        from astram_routing import load_graph, IncidentRouter
-        from astram_routing.incidents import Incident, haversine_m, _BASE_SEVERITY
-        from services.store import INCIDENTS
-
-        import logging
-        logging.getLogger("namma_traffic").info("Building synthetic Bengaluru road graph")
-        G = load_graph(backend="synthetic")
-
-        class LiveIncidentStore:
-            """Wraps the in-memory INCIDENTS list as an IncidentStore interface."""
-
-            def _build(self) -> list[Incident]:
-                out: list[Incident] = []
-                for raw in INCIDENTS:
-                    if raw.get("status") == "closed":
-                        continue
-                    cause = str(raw.get("event_cause", "others"))
-                    score = _BASE_SEVERITY.get(cause, 0.3)
-                    if raw.get("requires_road_closure"):
-                        score = min(1.0, score + 0.15)
-                    if raw.get("priority") == "High":
-                        score = min(1.0, score + 0.05)
-                    out.append(Incident(
-                        id=str(raw["id"]),
-                        latitude=float(raw["latitude"]),
-                        longitude=float(raw["longitude"]),
-                        event_cause=cause,
-                        priority=str(raw.get("priority", "Low")),
-                        status=str(raw.get("status", "active")),
-                        requires_road_closure=bool(raw.get("requires_road_closure", False)),
-                        corridor=str(raw.get("corridor", "")),
-                        zone=raw.get("zone"),
-                        start_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc),
-                        closed_datetime=None,
-                        severity=round(min(1.0, score), 3),
-                    ))
-                return out
-
-            def active_at(self, query_time: datetime) -> list[Incident]:
-                return self._build()
-
-            def within_radius(self, lat: float, lon: float, radius_m: float, query_time=None) -> list[Incident]:
-                pool = self._build()
-                return [i for i in pool if haversine_m(lat, lon, i.latitude, i.longitude) <= radius_m]
-
-        _incident_router = IncidentRouter(G, LiveIncidentStore())
-    return _incident_router
+def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    R = 6_371_000.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp, dl = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-# ---------------------------------------------------------------------------
-# Schemas
-# ---------------------------------------------------------------------------
+def _min_dist_to_route(lat: float, lon: float, coords: list[list[float]]) -> float:
+    return min(_haversine_m(lat, lon, c[0], c[1]) for c in coords) if coords else float("inf")
+
+
 class RouteRequest(BaseModel):
     origin_lat: float = Field(..., ge=-90,  le=90)
     origin_lon: float = Field(..., ge=-180, le=180)
@@ -108,38 +56,55 @@ class RouteResponse(BaseModel):
     warnings: list[str]
 
 
-# ---------------------------------------------------------------------------
-# Endpoint
-# ---------------------------------------------------------------------------
 @router.post("", response_model=RouteResponse)
 def find_route(req: RouteRequest):
+    url = _OSRM.format(
+        lon1=req.origin_lon, lat1=req.origin_lat,
+        lon2=req.dest_lon,   lat2=req.dest_lat,
+    )
     try:
-        ir = _get_router()
-        result = ir.route(
-            origin=(req.origin_lat, req.origin_lon),
-            destination=(req.dest_lat, req.dest_lon),
-            query_time=datetime.now(tz=timezone.utc),
-        )
-    except MemoryError:
-        raise HTTPException(status_code=503, detail="Route service unavailable: insufficient memory on this plan")
+        resp = httpx.get(url, params={"overview": "full", "geometries": "geojson"}, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"Route service unavailable: {exc}")
+        raise HTTPException(status_code=503, detail=f"Routing service unavailable: {exc}")
 
-    def _info(i) -> IncidentInfo:
-        return IncidentInfo(
-            id=i.id,
-            event_cause=i.event_cause,
-            severity_band=i.severity_band,
-            requires_road_closure=i.requires_road_closure,
-            latitude=i.latitude,
-            longitude=i.longitude,
-        )
+    if data.get("code") != "Ok" or not data.get("routes"):
+        raise HTTPException(status_code=422, detail="No route found between the given points")
+
+    route = data["routes"][0]
+    # OSRM returns [lon, lat] — convert to [lat, lon] for our API
+    coords = [[c[1], c[0]] for c in route["geometry"]["coordinates"]]
+
+    # Flag live incidents within 500m of the route
+    from services.store import INCIDENTS
+    on_route: list[IncidentInfo] = []
+    warnings: list[str] = []
+
+    for raw in INCIDENTS:
+        if raw.get("status") == "closed":
+            continue
+        inc_lat = float(raw.get("latitude", 0))
+        inc_lon = float(raw.get("longitude", 0))
+        if _min_dist_to_route(inc_lat, inc_lon, coords) <= _INCIDENT_RADIUS_M:
+            score = raw.get("severity_score") or 3
+            band = "Critical" if score >= 8 else "High" if score >= 6 else "Medium" if score >= 4 else "Low"
+            on_route.append(IncidentInfo(
+                id=str(raw["id"]),
+                event_cause=str(raw.get("event_cause", "others")),
+                severity_band=band,
+                requires_road_closure=bool(raw.get("requires_road_closure", False)),
+                latitude=inc_lat,
+                longitude=inc_lon,
+            ))
+            if raw.get("requires_road_closure"):
+                warnings.append(f"Road closure near {raw.get('address', 'route point')}")
 
     return RouteResponse(
-        path_coords=[[lat, lon] for lat, lon in result.path_coords],
-        total_travel_time_s=result.total_travel_time_s,
-        total_distance_m=result.total_distance_m,
-        incidents_avoided=[_info(i) for i in result.incidents_avoided],
-        incidents_on_route=[_info(i) for i in result.incidents_on_route],
-        warnings=[w.message for w in result.warnings],
+        path_coords=coords,
+        total_travel_time_s=route["duration"],
+        total_distance_m=route["distance"],
+        incidents_avoided=[],
+        incidents_on_route=on_route,
+        warnings=warnings,
     )
