@@ -9,6 +9,8 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
+from alembic.config import Config as AlembicConfig
+from alembic import command as alembic_command
 from routers import api, auth, admin, websocket, explain, simulate, whatif, command_center, demo, advisory, translate, routing
 from services.model_service import ModelService
 
@@ -23,6 +25,13 @@ model_service = ModelService()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    try:
+        cfg = AlembicConfig("alembic.ini")
+        cfg.set_main_option("sqlalchemy.url", os.getenv("DATABASE_URL", ""))
+        alembic_command.upgrade(cfg, "head")
+        logger.info("Database migrations applied")
+    except Exception as exc:
+        logger.error("Migration error (continuing): %s", exc)
     model_service.load()
     app.state.model_service = model_service
     logger.info("Namma Traffic API started — model_loaded=%s", model_service.is_loaded)
