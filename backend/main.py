@@ -36,10 +36,10 @@ app = FastAPI(title="Namma Traffic API", version="1.0.0", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-_frontend = os.getenv("FRONTEND_URL", "http://localhost:3000")
+_frontend = os.getenv("FRONTEND_URL", "https://namma-traffic-mzbokgnqc-saminadamns-projects.vercel.app/")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[_frontend, "http://localhost:3000"],
+    allow_origins=[_frontend, "https://namma-traffic-mzbokgnqc-saminadamns-projects.vercel.app/"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
