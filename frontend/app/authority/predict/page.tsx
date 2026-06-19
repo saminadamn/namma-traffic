@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useRef } from "react"
 import dynamic from "next/dynamic"
 import {
   predictEvent,
@@ -7,6 +7,19 @@ import {
 } from "@/lib/api"
 
 const LocationPicker = dynamic(() => import("@/components/maps/LocationPicker"), { ssr: false })
+
+interface GeoSuggestion { display_name: string; lat: string; lon: string }
+
+async function geocodeAddress(q: string): Promise<GeoSuggestion[]> {
+  if (q.trim().length < 3) return []
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q + " Bengaluru")}&format=json&limit=4&countrycodes=in`,
+      { headers: { "Accept-Language": "en" } }
+    )
+    return res.json()
+  } catch { return [] }
+}
 
 // ── Design tokens ────────────────────────────────────────────────────────────
 const RISK_BORDER = { Low: "border-l-emerald-500", Moderate: "border-l-amber-500", High: "border-l-orange-500", Critical: "border-l-red-500" } as const
@@ -86,13 +99,45 @@ function ProbBar({ pct, color }: { pct: number; color: string }) {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function Predict() {
-  const [form, setForm]     = useState<FormState>(DEFAULT)
-  const [result, setResult] = useState<PredictionOutput | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError]   = useState("")
+  const [form, setForm]         = useState<FormState>(DEFAULT)
+  const [result, setResult]     = useState<PredictionOutput | null>(null)
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState("")
+  // geocoding state
+  const [suggestions, setSuggestions] = useState<GeoSuggestion[]>([])
+  const [geoOpen, setGeoOpen]   = useState(false)
+  const [geoLoading, setGeoLoading] = useState(false)
+  const [mapKey, setMapKey]     = useState(0)   // remounts LocationPicker at new coords
+  const geoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setForm(f => ({ ...f, [k]: v }))
+
+  const handleAddressInput = (val: string) => {
+    set("address", val)
+    if (geoTimer.current) clearTimeout(geoTimer.current)
+    if (val.trim().length < 3) { setSuggestions([]); setGeoOpen(false); return }
+    geoTimer.current = setTimeout(async () => {
+      setGeoLoading(true)
+      const results = await geocodeAddress(val)
+      setSuggestions(results)
+      setGeoOpen(results.length > 0)
+      setGeoLoading(false)
+    }, 450)
+  }
+
+  const pickSuggestion = (s: GeoSuggestion) => {
+    const short = s.display_name.split(", ").slice(0, 2).join(", ")
+    setForm(f => ({
+      ...f,
+      address: short,
+      latitude: parseFloat(s.lat),
+      longitude: parseFloat(s.lon),
+    }))
+    setSuggestions([])
+    setGeoOpen(false)
+    setMapKey(k => k + 1)   // remount map centred on new coords
+  }
 
   const submit = async () => {
     setLoading(true); setError(""); setResult(null)
@@ -169,25 +214,63 @@ export default function Predict() {
           <div className="space-y-3">
             <Divider label="Location & Time" />
 
-            {/* Map picker */}
+            {/* Map picker — remounts at new coords when address is geocoded */}
             <LocationPicker
+              key={mapKey}
               lat={String(form.latitude)}
               lon={String(form.longitude)}
               onPick={(lat, lon, addr) => {
-                set("latitude",  parseFloat(lat))
-                set("longitude", parseFloat(lon))
-                if (addr) set("address", addr)
+                setForm(f => ({
+                  ...f,
+                  latitude:  parseFloat(lat),
+                  longitude: parseFloat(lon),
+                  address:   addr || f.address,
+                }))
+                setSuggestions([]); setGeoOpen(false)
               }}
             />
 
-            {/* Address (auto-filled by map, editable) */}
+            {/* Address — typing triggers geocoding and updates lat/lon */}
             <Field label="Address">
-              <input
-                className="gov-input"
-                placeholder="Click map to auto-fill, or type manually"
-                value={form.address}
-                onChange={e => set("address", e.target.value)}
-              />
+              <div className="relative">
+                <div className="relative">
+                  <input
+                    className="gov-input pr-8"
+                    placeholder="Type address to geocode, or click map above"
+                    value={form.address}
+                    onChange={e => handleAddressInput(e.target.value)}
+                    onFocus={() => { if (suggestions.length) setGeoOpen(true) }}
+                    onBlur={() => setTimeout(() => setGeoOpen(false), 150)}
+                  />
+                  {geoLoading && (
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                      <span className="w-3.5 h-3.5 border-2 border-gov-400 border-t-transparent rounded-full animate-spin inline-block" />
+                    </span>
+                  )}
+                </div>
+                {geoOpen && suggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                    {suggestions.map((s, i) => {
+                      const parts = s.display_name.split(", ")
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onMouseDown={() => pickSuggestion(s)}
+                          className="w-full text-left px-3 py-2.5 hover:bg-gov-50 border-b border-gray-50 last:border-0 transition-colors"
+                        >
+                          <p className="text-xs font-medium text-gray-800 truncate">{parts[0]}</p>
+                          <p className="text-[11px] text-gray-400 truncate">{parts.slice(1, 3).join(", ")}</p>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+              {/* Live lat/lon readout */}
+              <p className="text-[11px] text-gray-400 mt-1">
+                {form.latitude.toFixed(5)}, {form.longitude.toFixed(5)}
+              </p>
             </Field>
 
             {/* Date + Time */}

@@ -145,7 +145,7 @@ export default function Home() {
           {/* RIGHT — clean image, no floating cards */}
           <div className="flex justify-center md:justify-end">
             <img
-              src="/assets/car.png"
+              src="/assets/car.jpg"
               alt="Bengaluru traffic management"
               className="w-full max-w-sm md:max-w-full h-auto rounded-2xl object-contain"
             />
