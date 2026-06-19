@@ -16,9 +16,14 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
 
-    # ── Multilingual advisory + translation ──
+    # ── Multilingual advisory ──
     gemini_api_key: str = ""      # Gemini Flash advisory generation (free tier)
-    sarvam_api_key: str = ""      # Sarvam AI Hindi/Kannada translation
+
+    # ── Bhashini translation (22 Indian languages) ──
+    bhashini_inference_api_key: str = ""   # Dhruva inference key
+    bhashini_udyat_api_key: str = ""       # ULCA pipeline config key
+    bhashini_user_id: str = ""
+    bhashini_pipeline_id: str = ""
 
     # ── Photo upload (Cloudinary free tier) ──
     cloudinary_cloud_name: str = ""

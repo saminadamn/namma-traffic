@@ -1,73 +1,119 @@
+"""
+translate.py  —  Bhashini-powered batch translation for all 22 Indian languages.
+
+Flow (two-step pipeline):
+  1. GET pipeline config from ULCA (cached per process, per language).
+  2. POST texts as a batch array to the inference callback URL.
+
+Bhashini accepts an input *array* — no delimiter tricks needed.
+Falls back to returning original English strings if any API step fails.
+"""
 import asyncio
+import logging
+
 import httpx
 from fastapi import APIRouter
 from pydantic import BaseModel
 
 router = APIRouter()
+logger = logging.getLogger("namma_traffic.translate")
 
-_MYMEMORY_URL = "https://api.mymemory.translated.net/get"
-_DELIMITER = "\n[||]\n"  # unlikely to appear in UI strings or be translated
-_CHUNK = 15               # strings per Sarvam call
-_FREE_BATCH = 5           # concurrent MyMemory requests
+_ULCA_CONFIG_URL = "https://meity-auth.ulca.in/ulca/apis/v0/model/getModelsPipeline"
+_CONFIG_CACHE: dict[str, dict] = {}   # lang_code → {callback_url, service_id, auth_header}
+_CHUNK_SIZE = 40                       # texts per Bhashini call
 
 
 class TranslateBatchRequest(BaseModel):
     texts: list[str]
-    target: str  # "hi-IN" or "kn-IN"
+    target: str          # BCP-47 2-letter code: "hi", "kn", "te", "ta", …
 
 
 class TranslateBatchResponse(BaseModel):
     translations: list[str]
 
 
-async def _sarvam_single(text: str, target: str, key: str) -> str:
-    try:
-        from sarvamai import AsyncSarvamAI
-        client = AsyncSarvamAI(api_subscription_key=key)
-        response = await client.text.translate(
-            input=text,
-            source_language_code="en-IN",
-            target_language_code=target,
-            speaker_gender="Female",
-            mode="formal",
-        )
-        return response.translated_text or text
-    except Exception:
-        return text
+async def _pipeline_config(target: str, settings) -> dict:
+    """Fetch (and cache) the Bhashini pipeline config for a given target language."""
+    if target in _CONFIG_CACHE:
+        return _CONFIG_CACHE[target]
 
-
-async def _sarvam_batch(texts: list[str], target: str, key: str) -> list[str]:
-    sem = asyncio.Semaphore(4)
-    async def _call(t: str) -> str:
-        async with sem:
-            return await _sarvam_single(t, target, key)
-    return list(await asyncio.gather(*[_call(t) for t in texts]))
-
-
-async def _mymemory_single(client: httpx.AsyncClient, text: str, lang_code: str) -> str:
-    try:
-        resp = await client.get(
-            _MYMEMORY_URL,
-            params={"q": text, "langpair": f"en|{lang_code}"},
-            timeout=10,
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            _ULCA_CONFIG_URL,
+            headers={
+                "userID": settings.bhashini_user_id,
+                "ulcaApiKey": settings.bhashini_udyat_api_key,
+                "Content-Type": "application/json",
+            },
+            json={
+                "pipelineTasks": [{
+                    "taskType": "translation",
+                    "config": {"language": {"sourceLanguage": "en", "targetLanguage": target}},
+                }],
+                "pipelineRequestConfig": {"pipelineId": settings.bhashini_pipeline_id},
+            },
+            timeout=15,
         )
         resp.raise_for_status()
-        return resp.json().get("responseData", {}).get("translatedText", text) or text
-    except Exception:
-        return text
+        data = resp.json()
+
+    cfg = data["pipelineResponseConfig"][0]["config"][0]
+    result = {
+        "callback_url": cfg["apiEndPoint"],
+        "service_id":   cfg["serviceId"],
+        "auth_header":  {cfg["inferenceApiKey"]["name"]: cfg["inferenceApiKey"]["value"]},
+    }
+    _CONFIG_CACHE[target] = result
+    logger.info("Bhashini config cached  lang=%s  serviceId=%s", target, result["service_id"])
+    return result
 
 
-async def _mymemory_batch(texts: list[str], target: str) -> list[str]:
-    lang_code = target.split("-")[0]  # "hi-IN" → "hi"
-    results: list[str] = []
+async def _bhashini_chunk(texts: list[str], target: str, settings) -> list[str]:
+    """Translate one chunk via Bhashini inference (true batch, no delimiters)."""
+    config = await _pipeline_config(target, settings)
+
     async with httpx.AsyncClient() as client:
-        for i in range(0, len(texts), _FREE_BATCH):
-            chunk = texts[i : i + _FREE_BATCH]
-            translated = await asyncio.gather(
-                *[_mymemory_single(client, t, lang_code) for t in chunk]
-            )
-            results.extend(translated)
-    return results
+        resp = await client.post(
+            config["callback_url"],
+            headers={**config["auth_header"], "Content-Type": "application/json"},
+            json={
+                "pipelineTasks": [{
+                    "taskType": "translation",
+                    "config": {
+                        "language": {"sourceLanguage": "en", "targetLanguage": target},
+                        "serviceId": config["service_id"],
+                    },
+                }],
+                "inputData": {
+                    "input": [{"source": t} for t in texts],
+                    "audio": [],
+                },
+            },
+            timeout=30,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    outputs = data["pipelineResponse"][0]["output"]
+    translated = [o.get("target") or texts[i] for i, o in enumerate(outputs)]
+    if len(translated) < len(texts):
+        translated += texts[len(translated):]
+    return translated
+
+
+async def _bhashini_translate(texts: list[str], target: str, settings) -> list[str]:
+    if not texts:
+        return texts
+    chunks = [texts[i: i + _CHUNK_SIZE] for i in range(0, len(texts), _CHUNK_SIZE)]
+    try:
+        results = await asyncio.gather(*[_bhashini_chunk(c, target, settings) for c in chunks])
+        flat: list[str] = []
+        for r in results:
+            flat.extend(r)
+        return flat
+    except Exception as exc:
+        logger.warning("Bhashini failed for %s: %s — returning originals", target, exc)
+        return texts
 
 
 @router.post("", response_model=TranslateBatchResponse)
@@ -78,11 +124,13 @@ async def translate_batch(req: TranslateBatchRequest):
     if not req.texts:
         return TranslateBatchResponse(translations=req.texts)
 
-    # Primary: Sarvam AI SDK (when key is configured)
-    if settings.sarvam_api_key:
-        translations = await _sarvam_batch(req.texts, req.target, settings.sarvam_api_key)
+    if all([
+        settings.bhashini_udyat_api_key,
+        settings.bhashini_user_id,
+        settings.bhashini_pipeline_id,
+    ]):
+        translations = await _bhashini_translate(req.texts, req.target, settings)
         return TranslateBatchResponse(translations=translations)
 
-    # Fallback: MyMemory (free, no key needed)
-    translations = await _mymemory_batch(req.texts, req.target)
-    return TranslateBatchResponse(translations=translations)
+    logger.warning("Bhashini keys not configured; returning original strings")
+    return TranslateBatchResponse(translations=req.texts)

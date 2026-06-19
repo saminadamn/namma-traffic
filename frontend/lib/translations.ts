@@ -149,12 +149,31 @@ export const STRINGS = {
 
 export type TranslationKey = keyof typeof STRINGS
 export type Translations = Record<TranslationKey, string>
-export type Language = "en" | "hi" | "kn"
 
-export const LANG_META: Record<Language, { label: string; script: string }> = {
-  en: { label: "English",  script: "en-IN" },
-  hi: { label: "हिन्दी",   script: "hi-IN" },
-  kn: { label: "ಕನ್ನಡ",   script: "kn-IN" },
+export type Language =
+  | "en" | "hi" | "kn" | "te" | "ta" | "ml"
+  | "mr" | "gu" | "bn" | "pa" | "ur" | "or"
+  | "as" | "mai" | "sa"
+
+// label = native script name shown in switcher
+// short = 2-3 letter badge
+// code  = Bhashini / BCP-47 2-letter target code sent to backend
+export const LANG_META: Record<Language, { label: string; short: string; code: string }> = {
+  en:  { label: "English",      short: "EN",  code: "en"  },
+  hi:  { label: "हिन्दी",       short: "HI",  code: "hi"  },
+  kn:  { label: "ಕನ್ನಡ",       short: "KN",  code: "kn"  },
+  te:  { label: "తెలుగు",       short: "TE",  code: "te"  },
+  ta:  { label: "தமிழ்",        short: "TA",  code: "ta"  },
+  ml:  { label: "മലയാളം",      short: "ML",  code: "ml"  },
+  mr:  { label: "मराठी",        short: "MR",  code: "mr"  },
+  gu:  { label: "ગુજરાતી",      short: "GU",  code: "gu"  },
+  bn:  { label: "বাংলা",        short: "BN",  code: "bn"  },
+  pa:  { label: "ਪੰਜਾਬੀ",       short: "PA",  code: "pa"  },
+  ur:  { label: "اردو",         short: "UR",  code: "ur"  },
+  or:  { label: "ଓଡ଼ିଆ",       short: "OR",  code: "or"  },
+  as:  { label: "অসমীয়া",      short: "AS",  code: "as"  },
+  mai: { label: "मैथिली",       short: "MAI", code: "mai" },
+  sa:  { label: "संस्कृतम्",    short: "SA",  code: "sa"  },
 }
 
 // Static translations bundled in the frontend — used as instant fallback

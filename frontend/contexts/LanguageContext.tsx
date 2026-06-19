@@ -33,13 +33,13 @@ const Ctx = createContext<LanguageCtx>({
   translating: false,
 })
 
-async function fetchTranslations(targetScript: string): Promise<Translations> {
+async function fetchTranslations(langCode: string): Promise<Translations> {
   const keys = Object.keys(STRINGS) as TranslationKey[]
   const texts = keys.map((k) => STRINGS[k])
   const res = await fetch(`${BASE}/api/translate-batch`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ texts, target: targetScript }),
+    body: JSON.stringify({ texts, target: langCode }),
     cache: "no-store",
   })
   if (!res.ok) throw new Error("translate-batch failed")
@@ -58,7 +58,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   // Restore saved language preference on mount
   useEffect(() => {
     const saved = localStorage.getItem(PREF_KEY) as Language | null
-    if (saved && ["en", "hi", "kn"].includes(saved)) setLangState(saved)
+    const validCodes = Object.keys(LANG_META) as Language[]
+    if (saved && validCodes.includes(saved)) setLangState(saved)
   }, [])
 
   const setLang = useCallback(
@@ -72,7 +73,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       // if it fails the static strings are already displayed.
       setTranslating(true)
       try {
-        const result = await fetchTranslations(LANG_META[next].script)
+        const result = await fetchTranslations(LANG_META[next].code)
         setCache((p) => ({ ...p, [next]: result }))
       } catch {
         // Static translations remain active — no visible fallback needed
