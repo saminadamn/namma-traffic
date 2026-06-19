@@ -6,13 +6,21 @@ import { authLogin } from "@/lib/api"
 import { useLanguage } from "@/contexts/LanguageContext"
 import LanguageSwitcher from "@/components/LanguageSwitcher"
 
+const DEMO = { phone: "9000000000", password: "Admin@1234" }
+
 export default function AuthorityLoginPage() {
   const router = useRouter()
   const { t } = useLanguage()
   const [identifier, setIdentifier] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [password,   setPassword]   = useState("")
+  const [error,      setError]      = useState("")
+  const [loading,    setLoading]    = useState(false)
+
+  const fillDemo = () => {
+    setIdentifier(DEMO.phone)
+    setPassword(DEMO.password)
+    setError("")
+  }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,30 +43,52 @@ export default function AuthorityLoginPage() {
       <div className="absolute top-4 right-4">
         <LanguageSwitcher />
       </div>
+
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-2xl mx-auto mb-3">🛡️</div>
           <h1 className="text-xl font-semibold text-gov-900">{t("login_title")}</h1>
           <p className="text-sm text-gray-500 mt-1">{t("login_subtitle")}</p>
         </div>
+
+        {/* Demo credentials banner */}
+        <button
+          type="button"
+          onClick={fillDemo}
+          className="w-full mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-left hover:bg-amber-100 transition-colors group"
+        >
+          <p className="text-xs font-semibold text-amber-800 flex items-center gap-1.5">
+            <span>🔑</span> Demo / Judge Access
+            <span className="ml-auto text-amber-600 text-[10px] group-hover:underline">Click to fill →</span>
+          </p>
+          <p className="text-xs text-amber-700 mt-1">
+            Phone: <span className="font-mono font-bold">{DEMO.phone}</span>
+            &nbsp;&nbsp;Password: <span className="font-mono font-bold">{DEMO.password}</span>
+          </p>
+        </button>
+
         <form onSubmit={submit} className="gov-card p-6 space-y-4">
           {error && (
             <p className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</p>
           )}
           <div>
             <label className="gov-label">{t("login_identifier")}</label>
-            <input className="gov-input" type="text" value={identifier} onChange={e => setIdentifier(e.target.value)}
+            <input className="gov-input" type="text" value={identifier}
+              onChange={e => setIdentifier(e.target.value)}
               placeholder={t("login_identifier_placeholder")} required autoFocus />
           </div>
           <div>
             <label className="gov-label">{t("login_password")}</label>
-            <input className="gov-input" type="password" value={password} onChange={e => setPassword(e.target.value)}
+            <input className="gov-input" type="password" value={password}
+              onChange={e => setPassword(e.target.value)}
               placeholder={t("login_password_placeholder")} required />
           </div>
-          <button type="submit" disabled={loading || !identifier || !password} className="gov-btn w-full disabled:opacity-50">
+          <button type="submit" disabled={loading || !identifier || !password}
+            className="gov-btn w-full disabled:opacity-50">
             {loading ? t("login_signing") : t("login_btn")}
           </button>
         </form>
+
         <p className="text-center text-xs text-gray-500 mt-4">
           {t("login_new_user")}{" "}
           <Link href="/authority/signup" className="text-gov-500 hover:underline">{t("login_request")}</Link>

@@ -74,7 +74,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       setTranslating(true)
       try {
         const result = await fetchTranslations(LANG_META[next].code)
-        setCache((p) => ({ ...p, [next]: result }))
+        // Only update cache when we got actual translations (not English originals
+        // returned by the backend when no API keys are configured).
+        const keys = Object.keys(STRINGS) as TranslationKey[]
+        const isTranslated = keys.some(k => result[k] !== STRINGS[k])
+        if (isTranslated) {
+          setCache((p) => ({ ...p, [next]: result }))
+        }
       } catch {
         // Static translations remain active — no visible fallback needed
       } finally {
