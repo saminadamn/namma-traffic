@@ -128,8 +128,10 @@ def find_route(req: RouteRequest):
             destination=(req.dest_lat, req.dest_lon),
             query_time=datetime.now(tz=timezone.utc),
         )
+    except MemoryError:
+        raise HTTPException(status_code=503, detail="Route service unavailable: insufficient memory on this plan")
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=503, detail=f"Route service unavailable: {exc}")
 
     def _info(i) -> IncidentInfo:
         return IncidentInfo(
