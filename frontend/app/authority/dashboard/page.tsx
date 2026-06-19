@@ -53,7 +53,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         {kpis.map(k => (
           <div key={k.label} className="gov-card p-4">
             <p className="text-[11px] text-gray-500 mb-1">{k.label}</p>
@@ -62,8 +62,8 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-2 gov-card p-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="md:col-span-2 gov-card p-4">
           <p className="text-sm font-medium text-gov-900 mb-3">Live incidents</p>
           {incidents.length === 0 ? <p className="text-xs text-gray-400">Connecting to API…</p> :
             incidents.map(inc => (
