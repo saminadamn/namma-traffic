@@ -137,7 +137,7 @@ export default function Dashboard() {
       <div className="gov-card p-4 mt-4">
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm font-medium text-gov-900">Top priority incidents</p>
-          <span className="text-[10px] text-gray-400">severity × congestion impact × emergency proximity</span>
+          <span className="text-[10px] text-gray-400">severity · congestion · proximity · ML closure probability</span>
         </div>
         {topPriority.length === 0 ? <p className="text-xs text-gray-400">No active incidents to rank.</p> : (
           <div className="space-y-2">
@@ -146,7 +146,10 @@ export default function Dashboard() {
                 <span className="w-5 h-5 rounded-full bg-gov-50 text-gov-600 text-[11px] font-medium flex items-center justify-center flex-shrink-0">{i + 1}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-gray-800 truncate">{inc.address}</p>
-                  <p className="text-[11px] text-gray-400 truncate">{inc.zone} · impact {inc.congestion_impact_score}% · proximity {inc.emergency_proximity_score}%</p>
+                  <p className="text-[11px] text-gray-400 truncate">
+                    {inc.zone} · impact {inc.congestion_impact_score}%
+                    {inc.closure_probability != null && ` · closure ${Math.round((inc.closure_probability as number) * 100)}%`}
+                  </p>
                 </div>
                 {inc.severity_label && <span className={severityBadge(inc.severity_label)}>{inc.severity_label}</span>}
                 <span className="text-sm font-medium text-gov-900 w-12 text-right">{inc.priority_score}</span>

@@ -83,6 +83,8 @@ class Incident(Base):
     # of creating a new row when several citizens report the same thing.
     confirmation_count: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     severity_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    closure_probability: Mapped[float | None] = mapped_column(Float, nullable=True)
+    priority_probability: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     start_datetime: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -25,7 +25,7 @@ from services import advisory_service, incident_service, store
 
 logger = logging.getLogger("namma_traffic.command_center")
 
-OFFICERS_TOTAL = 240
+OFFICERS_TOTAL = 500
 
 
 def _estimate_allocated_officers(active_incidents: list[dict]) -> int:

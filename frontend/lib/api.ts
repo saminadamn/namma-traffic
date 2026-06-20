@@ -43,7 +43,20 @@ export const getReports       = (s?: string)     => api<Report[]>(`/api/reports$
 export const getPendingReports = ()              => api<Report[]>("/api/reports?status=pending")
 export const getCorridorRisk  = ()               => api<CorridorRisk[]>("/api/incidents/corridor-risk")
 export const verifyReport     = (b: object)      => api("/api/reports/verify", { method: "PATCH", body: JSON.stringify(b) })
-export const submitReport     = (f: FormData)    => fetch(`${BASE}/api/reports`, { method: "POST", body: f }).then(r => r.json())
+export const submitReport     = async (f: FormData) => {
+  let res: Response
+  try {
+    res = await fetch(`${BASE}/api/reports`, { method: "POST", body: f })
+  } catch {
+    throw new Error(`Cannot reach backend at ${BASE} — is the server running?`)
+  }
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`
+    try { const j = await res.json(); detail = j.detail || JSON.stringify(j) } catch {}
+    throw new Error(detail)
+  }
+  return res.json()
+}
 export const getHeatmap       = (c?: string)     => api<HeatmapData>(`/api/heatmap${c ? "?cause=" + c : ""}`)
 export const getHotspots      = ()               => api<Hotspot[]>("/api/heatmap/hotspots")
 export const getAnalytics     = ()               => api<Analytics>("/api/analytics/summary")
@@ -95,6 +108,7 @@ export interface Incident {
   priority: "High" | "Low"; status: string; requires_road_closure: boolean
   description: string; start_datetime: string
   severity_score?: number | null; severity_label?: "Low" | "Medium" | "High" | "Critical" | null
+  closure_probability?: number | null; priority_probability?: number | null
   priority_score?: number; congestion_impact_score?: number; emergency_proximity_score?: number
 }
 export interface IncidentStats { total: number; active: number; high_priority: number; road_closures: number }

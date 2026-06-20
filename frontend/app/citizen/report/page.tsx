@@ -122,8 +122,8 @@ export default function ReportPage() {
       if (!res.tracking_id) throw new Error("No tracking ID")
       setTracking(res.tracking_id)
       setPhotoPreview(null)
-    } catch {
-      setSubmitError("Submission failed — check your connection and try again.")
+    } catch (err: any) {
+      setSubmitError(err?.message || "Submission failed — check your connection and try again.")
     } finally {
       setLoading(false)
     }

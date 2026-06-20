@@ -23,7 +23,10 @@ EMERGENCY_FACILITIES = [
     {"name": "Columbia Asia Hebbal", "lat": 13.0481, "lon": 77.5921},
 ]
 
-WEIGHTS = {"severity": 0.5, "congestion": 0.3, "emergency_proximity": 0.2}
+# ML closure_probability is included as a fourth signal when available.
+# Weights sum to 1.0 when ML is present; fall back to the three-factor
+# formula (renormalized) when closure_probability is NULL.
+WEIGHTS = {"severity": 0.40, "congestion": 0.25, "emergency_proximity": 0.15, "ml_closure": 0.20}
 
 
 def _haversine_km(lat1, lon1, lat2, lon2):
@@ -48,30 +51,48 @@ def congestion_impact_score(zone: str | None) -> float:
     return round(min(rate * 100 + 20, 100), 1)
 
 
-def composite_priority_score(severity_score: float, congestion_impact: float, emergency_proximity: float) -> float:
+def composite_priority_score(
+    severity_score: float,
+    congestion_impact: float,
+    emergency_proximity: float,
+    closure_probability: float | None = None,
+) -> float:
+    if closure_probability is not None:
+        # Full four-factor formula when ML closure probability is available
+        return round(
+            severity_score      * WEIGHTS["severity"]
+            + congestion_impact * WEIGHTS["congestion"]
+            + emergency_proximity * WEIGHTS["emergency_proximity"]
+            + closure_probability * 100 * WEIGHTS["ml_closure"],
+            1,
+        )
+    # Fallback: renormalize three-factor weights to sum to 1.0
+    w_sum = WEIGHTS["severity"] + WEIGHTS["congestion"] + WEIGHTS["emergency_proximity"]
     return round(
-        severity_score * WEIGHTS["severity"]
-        + congestion_impact * WEIGHTS["congestion"]
-        + emergency_proximity * WEIGHTS["emergency_proximity"],
+        severity_score      * (WEIGHTS["severity"]            / w_sum)
+        + congestion_impact * (WEIGHTS["congestion"]          / w_sum)
+        + emergency_proximity * (WEIGHTS["emergency_proximity"] / w_sum),
         1,
     )
 
 
 def rank_incidents(incidents: list[dict], limit: int = 10) -> list[dict]:
     """Pure function over a list of incident dicts shaped like
-    services/incident_service.py's _incident_to_dict() output (must
-    already include severity_score — see that module). Kept separate
-    from any DB query so it's unit-testable without a database."""
+    services/incident_service.py's _incident_to_dict() output.
+    Uses ML closure_probability when available, falls back to three-factor
+    formula when the column is NULL (older incidents or ML unavailable)."""
     ranked = []
     for inc in incidents:
-        severity = inc.get("severity_score") or 0
+        severity   = inc.get("severity_score") or 0
         congestion = congestion_impact_score(inc.get("zone"))
-        proximity = emergency_proximity_score(inc["latitude"], inc["longitude"])
-        composite = composite_priority_score(severity, congestion, proximity)
+        proximity  = emergency_proximity_score(inc["latitude"], inc["longitude"])
+        closure_p  = inc.get("closure_probability")   # None if not yet scored
+        composite  = composite_priority_score(severity, congestion, proximity, closure_p)
         ranked.append({
             **inc,
             "congestion_impact_score": congestion,
             "emergency_proximity_score": proximity,
+            "closure_probability": closure_p,
             "priority_score": composite,
         })
     ranked.sort(key=lambda r: r["priority_score"], reverse=True)

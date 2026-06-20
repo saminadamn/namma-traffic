@@ -76,6 +76,8 @@ def _incident_to_dict(inc: Incident) -> dict:
         # below for where it's now actually populated.
         "severity_score": inc.severity_score,
         "severity_label": severity_service.label_for_score(inc.severity_score) if inc.severity_score is not None else None,
+        "closure_probability": inc.closure_probability,
+        "priority_probability": inc.priority_probability,
     }
 
 
@@ -181,6 +183,29 @@ def create_incident(db: Session, data: dict, reporter_id=None) -> tuple[dict, bo
     db.add(incident)
     db.commit()
     db.refresh(incident)
+
+    # ML scoring — run CatBoost immediately so the priority ranking widget
+    # can incorporate closure_probability. Failures are non-fatal.
+    try:
+        from services import catboost_service
+        now = datetime.now(timezone.utc)
+        ml = catboost_service.predict(
+            event_type=data.get("incident_type", "unplanned"),
+            latitude=data["latitude"],
+            longitude=data["longitude"],
+            event_cause=data["event_cause"],
+            authenticated=True,          # authority-created incident
+            veh_type=data.get("veh_type"),
+            start_datetime=now.isoformat(),
+            description=data.get("description", ""),
+        )
+        incident.closure_probability  = ml["closure_probability"]
+        incident.priority_probability = ml["priority_probability"]
+        db.commit()
+        db.refresh(incident)
+    except Exception:
+        pass   # scoring failure must not block incident creation
+
     return _incident_to_dict(incident), True
 
 
