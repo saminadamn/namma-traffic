@@ -3,8 +3,9 @@ import logging
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import os
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -117,6 +118,18 @@ app.include_router(translate.router,      prefix="/api/translate-batch", tags=["
 app.include_router(routing.router,        prefix="/api/route",           tags=["Safe Route"])
 app.include_router(ml_predict.router,    prefix="/api/ml-predict",      tags=["Authority ML Predict"])
 app.include_router(diversion.router,     prefix="/api",                 tags=["Diversion Planning Engine"])
+
+@app.exception_handler(Exception)
+async def _global_exception_handler(request: Request, exc: Exception):
+    """Catch-all so unhandled 500s are returned through FastAPI's ExceptionMiddleware
+    (which sits inside CORSMiddleware). Without this, Starlette's ServerErrorMiddleware
+    generates the 500 *outside* CORSMiddleware, so no Access-Control-Allow-Origin header
+    is added and the browser reports a CORS error instead of the real 500."""
+    if isinstance(exc, HTTPException):
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    logger.error("Unhandled exception %s %s: %s", request.method, request.url.path, exc, exc_info=True)
+    return JSONResponse(status_code=500, content={"detail": f"{type(exc).__name__}: {exc}"})
+
 
 @app.get("/health")
 def health():

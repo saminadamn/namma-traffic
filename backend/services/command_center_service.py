@@ -17,7 +17,6 @@ placeholder number:
 OFFICERS_TOTAL is a plausible duty-roster size for a demo, not a real
 HR/personnel-system integration — there is no such system in this repo.
 """
-import asyncio
 import logging
 from datetime import datetime, timezone
 
@@ -66,12 +65,32 @@ def _maybe_generate_advisory(db) -> None:
     if last and last.get("incident_id") == top_incident["id"]:
         return
     try:
-        advisory = asyncio.run(advisory_service.generate_advisory(
-            address=top_incident["address"],
-            zone=top_incident.get("zone"),
-            severity_label=top_incident.get("severity_label") or "Medium",
-            severity_score=top_incident.get("severity_score") or 50,
-        ))
+        import asyncio as _asyncio
+        try:
+            loop = _asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if loop and loop.is_running():
+            # Called from a FastAPI thread-pool worker — can't use asyncio.run().
+            # Schedule the coroutine on the running loop and skip if it doesn't complete fast.
+            import concurrent.futures
+            fut = _asyncio.run_coroutine_threadsafe(
+                advisory_service.generate_advisory(
+                    address=top_incident["address"],
+                    zone=top_incident.get("zone"),
+                    severity_label=top_incident.get("severity_label") or "Medium",
+                    severity_score=top_incident.get("severity_score") or 50,
+                ),
+                loop,
+            )
+            advisory = fut.result(timeout=5)
+        else:
+            advisory = _asyncio.run(advisory_service.generate_advisory(
+                address=top_incident["address"],
+                zone=top_incident.get("zone"),
+                severity_label=top_incident.get("severity_label") or "Medium",
+                severity_score=top_incident.get("severity_score") or 50,
+            ))
         advisory["incident_id"] = top_incident["id"]
         store.ADVISORIES.append(advisory)
     except Exception as exc:

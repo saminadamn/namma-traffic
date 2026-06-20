@@ -183,7 +183,14 @@ async def create_report(
 
 @reports_router.patch("/verify")
 async def verify(action: VerifyAction, db=Depends(get_db)):
-    report_dict, incident_dict = incident_service.verify_report(db, action.report_id, action.action)
+    from fastapi import HTTPException as _HTTPException
+    try:
+        report_dict, incident_dict = incident_service.verify_report(db, action.report_id, action.action)
+    except _HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("verify_report failed for %s: %s", action.report_id, exc, exc_info=True)
+        raise _HTTPException(status_code=500, detail=str(exc))
     if incident_dict:
         await manager.broadcast("incident_created", incident_dict)
     return {"message": f"Report {incident_service.ACTION_PAST_TENSE.get(action.action, action.action)}"}
