@@ -12,6 +12,8 @@ export const STRINGS = {
   nav_track: "Track",
   nav_route: "Safe Route",
   nav_authority_signin: "Authority sign in",
+  traffic_personnel: "Traffic Personnel",
+  traffic_personnel_desc: "Government-verified field reporter — reports auto-authenticated",
 
   // Authority nav
   nav_command_center: "Command Center",
@@ -173,6 +175,8 @@ export const STATIC_TRANSLATIONS: Partial<Record<Language, Translations>> = {
     nav_track: "ट्रैक करें",
     nav_route: "सुरक्षित मार्ग",
     nav_authority_signin: "अधिकारी साइन इन",
+    traffic_personnel: "यातायात कार्मिक",
+    traffic_personnel_desc: "सरकारी-सत्यापित फील्ड रिपोर्टर — रिपोर्ट स्वतः प्रमाणित",
     nav_command_center: "कमांड सेंटर",
     nav_dashboard: "डैशबोर्ड",
     nav_predict: "घटना पूर्वानुमान",
@@ -297,6 +301,8 @@ export const STATIC_TRANSLATIONS: Partial<Record<Language, Translations>> = {
     nav_track: "ಟ್ರ್ಯಾಕ್ ಮಾಡಿ",
     nav_route: "ಸುರಕ್ಷಿತ ಮಾರ್ಗ",
     nav_authority_signin: "ಅಧಿಕಾರಿ ಸೈನ್ ಇನ್",
+    traffic_personnel: "ಟ್ರಾಫಿಕ್ ಸಿಬ್ಬಂದಿ",
+    traffic_personnel_desc: "ಸರ್ಕಾರ-ಪರಿಶೀಲಿತ ಕ್ಷೇತ್ರ ವರದಿಗಾರ — ವರದಿಗಳು ಸ್ವಯಂ-ಪ್ರಮಾಣಿತ",
     nav_command_center: "ಕಮಾಂಡ್ ಸೆಂಟರ್",
     nav_dashboard: "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
     nav_predict: "ಘಟನೆ ಮುನ್ಸೂಚನೆ",
