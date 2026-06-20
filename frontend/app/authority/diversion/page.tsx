@@ -1,6 +1,13 @@
 "use client"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { getIncidents, getDiversionPlan, type Incident, type DiversionPlan } from "@/lib/api"
+
+function buildTokenMap(incidents: Incident[]): Record<string, string> {
+  const sorted = [...incidents].sort(
+    (a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime()
+  )
+  return Object.fromEntries(sorted.map((inc, i) => [inc.id, `I${i + 1}`]))
+}
 
 const STATUS_COLOR: Record<string, string> = {
   CLOSED:            "text-red-700 bg-red-50 border-red-200",
@@ -28,6 +35,8 @@ export default function DiversionPage() {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  const tokenMap = useMemo(() => buildTokenMap(incidents), [incidents])
 
   const generatePlan = async (id: string) => {
     setGenerating(g => ({ ...g, [id]: true }))
@@ -66,15 +75,19 @@ export default function DiversionPage() {
       ) : (
         <div className="space-y-3">
           {incidents.map(inc => {
-            const plan = plans[inc.id]
-            const busy = generating[inc.id]
-            const err  = errors[inc.id]
+            const plan  = plans[inc.id]
+            const busy  = generating[inc.id]
+            const err   = errors[inc.id]
+            const token = tokenMap[inc.id] ?? "?"
             return (
               <div key={inc.id} className="gov-card overflow-hidden">
                 {/* Incident header */}
                 <div className="flex items-start justify-between gap-3 p-4">
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                      <span className="text-[11px] font-bold text-gov-700 bg-gov-50 border border-gov-200 px-2 py-0.5 rounded font-mono">
+                        {token}
+                      </span>
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
                         inc.priority === "High"
                           ? "text-red-700 bg-red-50 border-red-200"
@@ -123,6 +136,9 @@ export default function DiversionPage() {
                 {/* Diversion plan result */}
                 {plan && (
                   <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
+                    <p className="text-[10px] font-semibold text-gov-600 font-mono mb-2">
+                      {token} · Diversion plan
+                    </p>
                     <div className="flex items-center gap-3 flex-wrap mb-3">
                       <div>
                         <p className="text-[10px] text-gray-400 mb-0.5">Affected road</p>

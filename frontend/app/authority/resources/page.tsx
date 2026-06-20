@@ -1,6 +1,13 @@
 "use client"
-import React, { useEffect, useState, useCallback } from "react"
+import React, { useEffect, useState, useCallback, useMemo } from "react"
 import { getIncidents, completeIncident, getDiversionPlan, resolveIncident, type Incident, type DiversionPlan } from "@/lib/api"
+
+function buildTokenMap(incidents: Incident[]): Record<string, string> {
+  const sorted = [...incidents].sort(
+    (a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime()
+  )
+  return Object.fromEntries(sorted.map((inc, i) => [inc.id, `I${i + 1}`]))
+}
 
 const PLAN: Record<string, { officers: number; barricades: number; radius: string }> = {
   accident:          { officers: 4,  barricades: 3, radius: "1 km"   },
@@ -17,8 +24,9 @@ const PLAN: Record<string, { officers: number; barricades: number; radius: strin
 const planFor = (cause: string) => PLAN[cause] || { officers: 2, barricades: 1, radius: "—" }
 
 interface ReleaseLog {
-  key: string   // unique per entry: id + release timestamp
+  key: string
   id: string
+  token: string
   address: string
   officers: number
   barricades: number
@@ -55,6 +63,8 @@ export default function Resources() {
 
   useEffect(() => { load() }, [load])
 
+  const tokenMap = useMemo(() => buildTokenMap(incidents), [incidents])
+
   const totals = incidents.reduce((acc, inc) => {
     const p = planFor(inc.event_cause)
     acc.officers += p.officers; acc.barricades += p.barricades
@@ -76,6 +86,7 @@ export default function Resources() {
       setReleased(prev => [{
         key: `${inc.id}-${Date.now()}`,
         id: inc.id,
+        token: tokenMap[inc.id] ?? "?",
         address: inc.address,
         officers: p.officers,
         barricades: p.barricades,
@@ -155,6 +166,7 @@ export default function Resources() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                 </svg>
                 <span className="text-gray-400">{r.at}</span>
+                <span className="text-[10px] font-bold text-gov-600 font-mono">{r.token}</span>
                 <span className="truncate flex-1">{r.address}</span>
                 <span className="text-emerald-700 font-medium whitespace-nowrap">
                   +{r.officers} officers · +{r.barricades} barricades freed
@@ -190,21 +202,28 @@ export default function Resources() {
                 const plan           = divPlans[inc.id]
                 const planErr        = divErrors[inc.id]
 
+                const token = tokenMap[inc.id] ?? "?"
+
                 return (
                   <React.Fragment key={inc.id}>
                     <tr
                       className={`border-b ${isPlanOpen ? "border-gov-100" : "border-gray-50"} last:border-0 transition-colors ${isConfirming ? "bg-amber-50" : ""}`}
                     >
                       <td className="py-2.5 pl-3 sm:pl-0">
-                        <span className="text-gray-800 capitalize">{inc.event_cause?.replace(/_/g, " ")}</span>
-                        {inc.severity_label && (
-                          <span className={`ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
-                            inc.severity_label === "Critical" ? "bg-red-100 text-red-700" :
-                            inc.severity_label === "High"     ? "bg-orange-100 text-orange-700" :
-                            inc.severity_label === "Medium"   ? "bg-amber-100 text-amber-700" :
-                                                                "bg-gray-100 text-gray-500"
-                          }`}>{inc.severity_label}</span>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-bold text-gov-700 bg-gov-50 border border-gov-200 px-1.5 py-0.5 rounded font-mono flex-shrink-0">
+                            {token}
+                          </span>
+                          <span className="text-gray-800 capitalize">{inc.event_cause?.replace(/_/g, " ")}</span>
+                          {inc.severity_label && (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
+                              inc.severity_label === "Critical" ? "bg-red-100 text-red-700" :
+                              inc.severity_label === "High"     ? "bg-orange-100 text-orange-700" :
+                              inc.severity_label === "Medium"   ? "bg-amber-100 text-amber-700" :
+                                                                  "bg-gray-100 text-gray-500"
+                            }`}>{inc.severity_label}</span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-2.5 text-gray-500 max-w-[160px] truncate">{inc.address}</td>
                       <td className="py-2.5 text-center font-medium">{p.officers}</td>
