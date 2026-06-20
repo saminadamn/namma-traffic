@@ -142,6 +142,7 @@ export interface AllocationItem {
   zone: string | null
   event_cause: string | null
   priority: string
+  severity_label: string | null
   closure_probability: number
   officers_needed: number
   barricades_needed: number

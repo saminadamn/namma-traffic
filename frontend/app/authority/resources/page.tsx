@@ -215,13 +215,18 @@ export default function Resources() {
                             {token}
                           </span>
                           <span className="text-gray-800 capitalize">{inc.event_cause?.replace(/_/g, " ")}</span>
-                          {inc.severity_label && (
+                          {/* Show ML severity_label (4-level); fall back to binary priority */}
+                          {inc.severity_label ? (
                             <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
                               inc.severity_label === "Critical" ? "bg-red-100 text-red-700" :
                               inc.severity_label === "High"     ? "bg-orange-100 text-orange-700" :
                               inc.severity_label === "Medium"   ? "bg-amber-100 text-amber-700" :
-                                                                  "bg-gray-100 text-gray-500"
+                                                                  "bg-emerald-100 text-emerald-700"
                             }`}>{inc.severity_label}</span>
+                          ) : (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
+                              inc.priority === "High" ? "bg-orange-100 text-orange-700" : "bg-gray-100 text-gray-500"
+                            }`}>{inc.priority}</span>
                           )}
                         </div>
                       </td>

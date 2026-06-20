@@ -22,6 +22,14 @@ const SEV_COLOR: Record<string, string> = {
   LOW:    "text-emerald-700",
 }
 
+// 4-level severity from ML severity_service
+const SEVERITY_BADGE: Record<string, string> = {
+  Critical: "text-red-700 bg-red-50 border-red-200",
+  High:     "text-orange-700 bg-orange-50 border-orange-200",
+  Medium:   "text-amber-700 bg-amber-50 border-amber-200",
+  Low:      "text-emerald-700 bg-emerald-50 border-emerald-200",
+}
+
 export default function DiversionPage() {
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [loading,   setLoading]   = useState(true)
@@ -88,13 +96,17 @@ export default function DiversionPage() {
                       <span className="text-[11px] font-bold text-gov-700 bg-gov-50 border border-gov-200 px-2 py-0.5 rounded font-mono">
                         {token}
                       </span>
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                        inc.priority === "High"
-                          ? "text-red-700 bg-red-50 border-red-200"
-                          : "text-gray-600 bg-gray-50 border-gray-200"
-                      }`}>{inc.priority} priority</span>
-                      {inc.severity_label && (
-                        <span className="text-[10px] text-gray-500">{inc.severity_label}</span>
+                      {/* ML severity label (4-level) — primary indicator */}
+                      {inc.severity_label ? (
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                          SEVERITY_BADGE[inc.severity_label] ?? "text-gray-600 bg-gray-50 border-gray-200"
+                        }`}>{inc.severity_label}</span>
+                      ) : (
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                          inc.priority === "High"
+                            ? SEVERITY_BADGE.High
+                            : "text-gray-600 bg-gray-50 border-gray-200"
+                        }`}>{inc.priority}</span>
                       )}
                       {inc.requires_road_closure && (
                         <span className="text-[10px] text-red-600 font-medium">Road closure</span>

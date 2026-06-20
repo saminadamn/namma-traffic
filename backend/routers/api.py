@@ -128,12 +128,18 @@ def resource_allocation(db=Depends(get_db)):
         .all()
     )
 
+    from services import severity_service
     result = []
     for inc in incidents:
         cp   = inc.closure_probability or 0.0
         ml_base = max(2, int(cp * 20))
-        if inc.priority == "High":
-            ml_base += 4
+        sev_label = (
+            severity_service.label_for_score(inc.severity_score)
+            if inc.severity_score is not None
+            else inc.priority  # fallback to binary priority
+        )
+        sev_bonus = {"Critical": 6, "High": 4, "Medium": 2, "Low": 0}.get(sev_label, 0)
+        ml_base += sev_bonus
         officers   = max(MIN_OFFICERS.get(inc.event_cause or "", 2), ml_base)
         barricades = max(1, int(cp * 15))
 
@@ -143,6 +149,7 @@ def resource_allocation(db=Depends(get_db)):
             "zone":                inc.zone,
             "event_cause":         inc.event_cause,
             "priority":            inc.priority,
+            "severity_label":      sev_label,
             "closure_probability": round(cp, 3),
             "officers_needed":     officers,
             "barricades_needed":   barricades,

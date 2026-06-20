@@ -202,6 +202,7 @@ def create_incident(db: Session, data: dict, reporter_id=None) -> tuple[dict, bo
         )
         incident.closure_probability  = ml["closure_probability"]
         incident.priority_probability = ml["priority_probability"]
+        incident.priority             = ml["priority_prediction"]   # sync binary priority from ML
         db.commit()
         db.refresh(incident)
     except Exception:
