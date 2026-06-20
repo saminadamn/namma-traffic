@@ -15,7 +15,6 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const NAV = [
-    { href: "/authority/command-center", label: t("nav_command_center"), icon: "▣" },
     { href: "/authority/dashboard",      label: t("nav_dashboard"),       icon: "▦" },
     { href: "/authority/predict",        label: t("nav_analysis"),        icon: "◈" },
     { href: "/authority/heatmap",        label: t("nav_heatmap_auth"),    icon: "◉" },
