@@ -33,13 +33,13 @@ export default function PublicHeader() {
     router.push("/")
   }
 
-  // "File a report" is hidden on the landing page
-  const isHome = path === "/"
+  // "File a report" only shown when user has entered as citizen or personnel
+  const showReport = isPersonnel || isCitizen
 
   const desktopLinks = [
     { href: "/",               label: t("nav_home")    },
     { href: "/citizen/heatmap",label: t("nav_heatmap") },
-    ...(!isHome ? [{ href: "/citizen/report", label: t("nav_report") }] : []),
+    ...(showReport ? [{ href: "/citizen/report", label: t("nav_report") }] : []),
     { href: "/citizen/route",  label: t("nav_route")   },
   ]
 
@@ -52,7 +52,7 @@ export default function PublicHeader() {
       href: "/citizen/heatmap", label: t("nav_heatmap"),
       icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg>,
     },
-    ...(!isHome ? [{
+    ...(showReport ? [{
       href: "/citizen/report", label: t("nav_report"),
       icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>,
     }] : []),
