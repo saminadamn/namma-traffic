@@ -36,6 +36,10 @@ logger = logging.getLogger("namma_traffic.diversion")
 
 router = APIRouter(tags=["Diversion Planning Engine"])
 
+# Module-level RoadNetworkService — shared across requests so OSMnx only
+# downloads the road graph once per unique location, not on every API call.
+_shared_rns = RoadNetworkService()
+
 
 # ── Dependency ────────────────────────────────────────────────────────────────
 
@@ -53,11 +57,10 @@ def _build_service(db: Session) -> tuple[DiversionPlanningService, Session]:
             except Exception:
                 db.rollback()
 
-    rns     = RoadNetworkService()
-    svc     = DiversionPlanningService(
+    svc = DiversionPlanningService(
         impact_service=IncidentImpactService(),
-        map_matching_service=MapMatchingService(road_network_service=rns),
-        road_network_service=rns,
+        map_matching_service=MapMatchingService(road_network_service=_shared_rns),
+        road_network_service=_shared_rns,
         persist_callback=_persist,
     )
     return svc, db
@@ -68,10 +71,10 @@ def _to_incident_input(inc: Incident) -> IncidentInput:
     # closure_probability may be NULL on old rows — default to 0.0
     closure_prob = float(inc.closure_probability or 0.0)
 
-    # authenticated: we treat reporter_id IS NOT NULL OR authority-created as True.
-    # Authority-created incidents have no reporter_id but are inherently verified.
-    # citizen-verified (status=active) incidents have been approved by an officer.
-    authenticated = inc.status == "active"
+    # The router already checks inc.status == "active" before calling this.
+    # The diversion engine's validate_incident requires authenticated=True for
+    # any active incident, so we set it unconditionally here.
+    authenticated = True
 
     # Map our priority string to the engine's Priority enum
     pri_map = {"High": Priority.HIGH, "Low": Priority.LOW}
@@ -110,7 +113,12 @@ def generate_diversion_plan(
     a ranked diversion plan. Also writes road_status and affected_road back
     to the incident row.
     """
-    inc = db.query(Incident).filter(Incident.id == request.incident_id).first()
+    try:
+        inc = db.query(Incident).filter(Incident.id == request.incident_id).first()
+    except Exception as exc:
+        logger.error("DB error fetching incident %s: %s", request.incident_id, exc)
+        raise HTTPException(status_code=500, detail=f"Database error: {exc}") from exc
+
     if inc is None:
         raise HTTPException(status_code=404, detail=f"Incident '{request.incident_id}' not found.")
 
@@ -134,6 +142,9 @@ def generate_diversion_plan(
     except RuntimeError as exc:
         logger.error("OSM error for incident %s: %s", request.incident_id, exc)
         raise HTTPException(status_code=503, detail=f"Road network unavailable: {exc}") from exc
+    except Exception as exc:
+        logger.error("Diversion plan error for incident %s: %s", request.incident_id, exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Diversion planning failed: {exc}") from exc
 
     return plan
 
