@@ -2,23 +2,44 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { getPendingReports, verifyReport, getReports, type Report } from "@/lib/api"
 
+// Derive consistent 4-level label from raw risk_score using the same
+// thresholds as severity_service.py (30 / 55 / 75) so the verify page
+// matches incident labels. "Moderate" from the old BRE is renamed "Medium".
+function severityLabel(score: number | null | undefined): string {
+  if (score == null) return "Low"
+  if (score < 30) return "Low"
+  if (score < 55) return "Medium"
+  if (score < 75) return "High"
+  return "Critical"
+}
+
+// CatBoost priority_probability → binary label
+function mlPriorityLabel(pp: number | null | undefined): string | null {
+  if (pp == null) return null
+  return pp >= 0.5 ? "High" : "Low"
+}
+
 const BAND_BG: Record<string, string> = {
   Low:      "bg-emerald-50 text-emerald-700 border-emerald-200",
-  Moderate: "bg-amber-50 text-amber-700 border-amber-200",
+  Medium:   "bg-amber-50 text-amber-700 border-amber-200",
   High:     "bg-orange-50 text-orange-700 border-orange-200",
   Critical: "bg-red-50 text-red-700 border-red-200",
+  Moderate: "bg-amber-50 text-amber-700 border-amber-200", // legacy fallback
 }
 const BAND_BORDER: Record<string, string> = {
-  Low: "border-l-emerald-500", Moderate: "border-l-amber-500",
+  Low: "border-l-emerald-500", Medium: "border-l-amber-500",
   High: "border-l-orange-500", Critical: "border-l-red-500",
+  Moderate: "border-l-amber-500",
 }
 const BAND_NUM: Record<string, string> = {
-  Low: "text-emerald-700", Moderate: "text-amber-700",
+  Low: "text-emerald-700", Medium: "text-amber-700",
   High: "text-orange-700", Critical: "text-red-700",
+  Moderate: "text-amber-700",
 }
 const BAND_BAR: Record<string, string> = {
-  Low: "bg-emerald-500", Moderate: "bg-amber-500",
+  Low: "bg-emerald-500", Medium: "bg-amber-500",
   High: "bg-orange-500", Critical: "bg-red-500",
+  Moderate: "bg-amber-500",
 }
 
 function StatusPill({ status }: { status: string }) {
@@ -175,11 +196,15 @@ export default function ReportsQueuePage() {
           </div>
         )}
 
-        {!loading && displayed.map(r => {
-          const band        = r.risk_band || "Low"
+        {!loading && displayed.map((r, idx) => {
           const hasScore    = r.risk_score != null
+          // Derive severity label from risk_score using same thresholds as severity_service.py
+          const band        = severityLabel(r.risk_score)
+          const mlPriority  = mlPriorityLabel(r.priority_probability)
           const closurePct  = r.closure_probability != null ? Math.round(r.closure_probability * 100) : null
           const isActioning = verifying === r.id
+          // Sequential index per tab (R1, R2…)
+          const token       = `R${idx + 1}`
 
           return (
             <div
@@ -189,18 +214,22 @@ export default function ReportsQueuePage() {
               <div className="flex items-start gap-4">
                 {/* Left: report info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    {/* Sequential token */}
+                    <span className="text-[10px] font-bold text-gov-700 bg-gov-50 border border-gov-200 px-1.5 py-0.5 rounded font-mono flex-shrink-0">
+                      {token}
+                    </span>
                     <span className="text-[10px] font-mono text-gray-400">{r.tracking_id}</span>
                     <span className="text-[10px] text-gray-300">·</span>
                     <span className="text-[10px] text-gray-400">
                       {new Date(r.created_at).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
                     </span>
                     {!hasScore && tab === "pending" && (
-                      <span className="text-[10px] text-gray-400 italic">· ML scoring in progress…</span>
+                      <span className="text-[10px] text-gray-400 italic">· ML scoring…</span>
                     )}
                   </div>
-                  <p className="text-xs font-semibold text-gray-900">
-                    {r.category}
+                  <p className="text-xs font-semibold text-gray-900 capitalize">
+                    {r.category?.replace(/_/g, " ")}
                   </p>
                   <p className="text-[11px] text-gray-500 mt-0.5 truncate">{r.address}</p>
                   {r.description && (
@@ -209,7 +238,7 @@ export default function ReportsQueuePage() {
                 </div>
 
                 {/* Middle: ML scores */}
-                <div className="flex-shrink-0 text-right space-y-1.5 min-w-[120px]">
+                <div className="flex-shrink-0 text-right space-y-1.5 min-w-[130px]">
                   {hasScore ? (
                     <>
                       <div className="flex items-center justify-end gap-2">
@@ -229,9 +258,22 @@ export default function ReportsQueuePage() {
                           {closurePct != null ? `${closurePct}%` : "—"}
                         </span>
                       </div>
-                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded border inline-block ${BAND_BG[band] || "bg-gray-50 text-gray-500 border-gray-200"}`}>
-                        {band}
-                      </span>
+                      <div className="flex items-center justify-end gap-1.5">
+                        {/* Severity from risk_score */}
+                        <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded border inline-block ${BAND_BG[band] || "bg-gray-50 text-gray-500 border-gray-200"}`}>
+                          {band}
+                        </span>
+                        {/* CatBoost binary priority — shown only when it differs or adds context */}
+                        {mlPriority && (
+                          <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded border inline-block ${
+                            mlPriority === "High"
+                              ? "bg-red-50 text-red-700 border-red-200"
+                              : "bg-gray-50 text-gray-500 border-gray-200"
+                          }`}>
+                            ML: {mlPriority}
+                          </span>
+                        )}
+                      </div>
                     </>
                   ) : (
                     <span className="text-[10px] text-gray-400 italic">Scoring…</span>
