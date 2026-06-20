@@ -112,6 +112,18 @@ def corridor_risk(db=Depends(get_db)):
     """Active incident severity aggregated by corridor — powers dashboard risk bars."""
     return incident_service.corridor_risk(db)
 
+
+@incidents_router.patch("/{incident_id}/resolve")
+def resolve_incident(incident_id: str, db=Depends(get_db)):
+    """Mark an incident as resolved — releases its officers and barricades
+    from the resource allocation count. Called by the Resources page when
+    an officer confirms the event is over."""
+    from fastapi import HTTPException
+    result = incident_service.resolve_incident(db, incident_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return result
+
 @incidents_router.post("")
 async def create_incident(inc: IncidentCreate, db=Depends(get_db)):
     incident_dict, was_new = incident_service.create_incident(db, inc.model_dump())

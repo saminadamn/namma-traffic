@@ -74,6 +74,7 @@ export const getCommandCenter = ()                         => api<CommandCenterS
 export const generateDemoData = (b?: Partial<DemoDataRequest>) =>
   api<DemoDataResponse>("/generate-demo-data", { method: "POST", body: JSON.stringify(b || {}) })
 export const getPriorityRanking  = (limit = 10) => api<Incident[]>(`/api/incidents/priority-ranking?limit=${limit}`)
+export const resolveIncident     = (id: string) => api<Incident>(`/api/incidents/${id}/resolve`, { method: "PATCH" })
 
 // ── Predict input / output ───────────────────────────────────────────────────
 export interface EventInput {

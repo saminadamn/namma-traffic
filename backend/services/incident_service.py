@@ -209,6 +209,20 @@ def create_incident(db: Session, data: dict, reporter_id=None) -> tuple[dict, bo
     return _incident_to_dict(incident), True
 
 
+def resolve_incident(db: Session, incident_id: str) -> dict | None:
+    """Mark an incident as resolved, stamp resolved_at, and return the
+    updated dict. Returns None if the ID doesn't exist or is already
+    resolved so the router can return 404 / 409 appropriately."""
+    inc = db.query(Incident).filter(Incident.id == incident_id).first()
+    if inc is None:
+        return None
+    inc.status      = "resolved"
+    inc.resolved_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(inc)
+    return _incident_to_dict(inc)
+
+
 def list_incidents(db: Session, status: str | None = None, limit: int = 50) -> list[dict]:
     q = db.query(Incident)
     if status:
