@@ -6,7 +6,11 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
     cache: "no-store",
     ...init,
   })
-  if (!res.ok) throw new Error(`API ${path} → ${res.status}`)
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`
+    try { const j = await res.json(); detail = j.detail || JSON.stringify(j) } catch {}
+    throw new Error(detail)
+  }
   return res.json()
 }
 

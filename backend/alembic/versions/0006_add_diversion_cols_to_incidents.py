@@ -17,8 +17,9 @@ depends_on    = None
 
 
 def upgrade() -> None:
-    op.add_column("incidents", sa.Column("road_status",   sa.String(32), nullable=True))
-    op.add_column("incidents", sa.Column("affected_road", sa.Text,       nullable=True))
+    conn = op.get_bind()
+    conn.execute(sa.text("ALTER TABLE incidents ADD COLUMN IF NOT EXISTS road_status  VARCHAR(32)"))
+    conn.execute(sa.text("ALTER TABLE incidents ADD COLUMN IF NOT EXISTS affected_road TEXT"))
 
 
 def downgrade() -> None:

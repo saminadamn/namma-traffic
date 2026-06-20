@@ -40,6 +40,8 @@ export default function ReportsQueuePage() {
   const [tab,        setTab]        = useState<"pending" | "verified">("pending")
   const [loading,    setLoading]    = useState(true)
   const [verifying,  setVerifying]  = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [lastSuccess, setLastSuccess] = useState<string | null>(null)
 
   const fetchData = useCallback(async (showSpinner = false) => {
     if (showSpinner) setLoading(true)
@@ -69,12 +71,19 @@ export default function ReportsQueuePage() {
 
   const act = async (report: Report, action: "approve" | "reject") => {
     setVerifying(report.id)
+    setActionError(null)
+    setLastSuccess(null)
     verifyingRef.current = report.id
     try {
       await verifyReport({ report_id: report.id, action })
+      setLastSuccess(action === "approve" ? "Report verified — incident created" : "Report rejected")
       await fetchData(true)
-    } catch { /* toast would go here */ }
-    finally { setVerifying(null); verifyingRef.current = null }
+    } catch (e: unknown) {
+      setActionError(e instanceof Error ? e.message : "Verification failed — please try again")
+    } finally {
+      setVerifying(null)
+      verifyingRef.current = null
+    }
   }
 
   const displayed = tab === "pending" ? pending : verified
@@ -123,6 +132,26 @@ export default function ReportsQueuePage() {
           Refresh
         </button>
       </div>
+
+      {/* Action feedback */}
+      {actionError && (
+        <div className="mb-3 flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2.5 rounded-lg">
+          <svg className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          <span><strong>Verification failed:</strong> {actionError}</span>
+          <button onClick={() => setActionError(null)} className="ml-auto flex-shrink-0 text-red-400 hover:text-red-600">✕</button>
+        </div>
+      )}
+      {lastSuccess && (
+        <div className="mb-3 flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs px-3 py-2.5 rounded-lg">
+          <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>{lastSuccess}</span>
+          <button onClick={() => setLastSuccess(null)} className="ml-auto flex-shrink-0 text-emerald-400 hover:text-emerald-600">✕</button>
+        </div>
+      )}
 
       {/* List */}
       <div className="space-y-2">
