@@ -2,23 +2,13 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import {
-  getIncidentStats, getIncidents, getWeather, getPriorityRanking,
-  getCorridorRisk, getPendingReports,
+  getIncidentStats, getWeather, getPriorityRanking, getPendingReports,
   getCommandCenter, generateDemoData,
-  type Incident, type IncidentStats, type Weather, type CorridorRisk, type CommandCenterSummary,
+  type Incident, type IncidentStats, type Weather, type CommandCenterSummary,
 } from "@/lib/api"
 
-function corridorColor(risk: number): string {
-  if (risk >= 75) return "#E24B4A"
-  if (risk >= 50) return "#EF9F27"
-  return "#1D9E75"
-}
-
-const badge = (p: string) => p === "High" ? "badge-critical" : "badge-low"
 const severityBadge = (s?: string | null) =>
   s === "Critical" ? "badge-critical" : s === "High" ? "badge-high" : s === "Medium" ? "badge-medium" : "badge-low"
-const dot = (p: string, status: string) =>
-  status !== "active" ? "#1D9E75" : p === "High" ? "#E24B4A" : "#EF9F27"
 
 const DEMO_ITEMS = [
   { label: "4 accidents",         dot: "bg-red-400" },
@@ -29,10 +19,8 @@ const DEMO_ITEMS = [
 
 export default function Dashboard() {
   const [stats,        setStats]        = useState<IncidentStats | null>(null)
-  const [incidents,    setIncidents]    = useState<Incident[]>([])
   const [weather,      setWeather]      = useState<Weather | null>(null)
   const [topPriority,  setTopPriority]  = useState<Incident[]>([])
-  const [corridors,    setCorridors]    = useState<CorridorRisk[]>([])
   const [pendingCount, setPendingCount] = useState<number | null>(null)
   const [summary,      setSummary]      = useState<CommandCenterSummary | null>(null)
   const [lastRefresh,  setLastRefresh]  = useState<Date | null>(null)
@@ -42,10 +30,8 @@ export default function Dashboard() {
 
   const load = () => {
     getIncidentStats().then(setStats).catch(() => {})
-    getIncidents("status=active&limit=6").then(setIncidents).catch(() => {})
     getWeather().then(setWeather).catch(() => {})
     getPriorityRanking(5).then(setTopPriority).catch(() => {})
-    getCorridorRisk().then(setCorridors).catch(() => {})
     getPendingReports().then(r => setPendingCount(r.length)).catch(() => {})
     getCommandCenter().then(s => { setSummary(s); setLastRefresh(new Date()) }).catch(() => {})
   }
@@ -71,7 +57,6 @@ export default function Dashboard() {
     }
   }
 
-  const officersPct = summary ? Math.round((summary.officers_available / summary.officers_total) * 100) : 0
   const get = (key: keyof CommandCenterSummary) => summary ? String(summary[key]) : "—"
 
   const incidentKpis = [
@@ -157,48 +142,6 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Live incidents + Corridor risk */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        <div className="md:col-span-2 gov-card p-4">
-          <p className="text-sm font-medium text-gov-900 mb-3">Live incidents</p>
-          {incidents.length === 0 ? <p className="text-xs text-gray-400">Connecting to API…</p> :
-            incidents.map(inc => (
-              <div key={inc.id} className="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0">
-                <span className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ background: dot(inc.priority, inc.status) }} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-800 truncate">{inc.event_cause?.replace(/_/g, " ")} — {inc.address}</p>
-                  <p className="text-[11px] text-gray-400">{inc.zone} · {inc.corridor}</p>
-                </div>
-                {inc.severity_label && <span className={severityBadge(inc.severity_label)}>{inc.severity_label}</span>}
-                <span className={inc.status !== "active" ? "badge-resolved" : badge(inc.priority)}>
-                  {inc.status !== "active" ? "Resolved" : inc.priority === "High" ? "Critical" : "Active"}
-                </span>
-              </div>
-            ))}
-        </div>
-
-        <div className="gov-card p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-medium text-gov-900">Risk by corridor</p>
-            <span className="text-[10px] text-gray-400">live</span>
-          </div>
-          {corridors.length === 0 ? (
-            <p className="text-xs text-gray-400 py-4 text-center">No active incidents by corridor</p>
-          ) : corridors.map(c => (
-            <div key={c.name} className="mb-3">
-              <div className="flex justify-between text-[11px] text-gray-500 mb-1">
-                <span>{c.name}</span>
-                <span className="font-medium" style={{ color: corridorColor(c.risk) }}>{c.risk}</span>
-              </div>
-              <div className="h-1.5 bg-gray-100 rounded">
-                <div className="h-1.5 rounded transition-all duration-700" style={{ width: `${c.risk}%`, background: corridorColor(c.risk) }} />
-              </div>
-              <p className="text-[10px] text-gray-400 mt-0.5">{c.count} active incident{c.count !== 1 ? "s" : ""}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Top priority incidents */}
       <div className="gov-card p-4 mb-4">
         <div className="flex items-center justify-between mb-3">
@@ -225,82 +168,32 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Officer deployment + System status + Demo generator */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
-        <div className="gov-card p-4">
-          <p className="text-sm font-medium text-gov-900 mb-3">Officer deployment</p>
-          {summary ? (
-            <>
-              <div className="mb-4">
-                <div className="flex justify-between text-xs mb-1.5">
-                  <span className="text-gray-500">Deployed</span>
-                  <span className="font-medium text-gray-700">{summary.officers_total - summary.officers_available}</span>
-                </div>
-                <div className="h-1.5 bg-gray-100 rounded-full">
-                  <div className="h-1.5 rounded-full bg-red-400 transition-all" style={{ width: `${100 - officersPct}%` }} />
-                </div>
-              </div>
-              <div className="mb-4">
-                <div className="flex justify-between text-xs mb-1.5">
-                  <span className="text-gray-500">Available</span>
-                  <span className="font-medium text-gray-700">{summary.officers_available}</span>
-                </div>
-                <div className="h-1.5 bg-gray-100 rounded-full">
-                  <div className="h-1.5 rounded-full bg-emerald-400 transition-all" style={{ width: `${officersPct}%` }} />
-                </div>
-              </div>
-              <p className="text-[10px] text-gray-400 leading-relaxed">Updates when events are ended in Resources.</p>
-            </>
-          ) : <p className="text-xs text-gray-400">Loading…</p>}
+      {/* Demo data generator */}
+      <div className="gov-card p-4 max-w-sm">
+        <p className="text-sm font-medium text-gov-900 mb-1">Demo data generator</p>
+        <p className="text-[11px] text-gray-400 mb-3 leading-relaxed">
+          Populates the system with realistic traffic events for the presentation.
+        </p>
+        <div className="grid grid-cols-2 gap-1.5 text-[11px] text-gray-500 mb-4">
+          {DEMO_ITEMS.map(({ label, dot }) => (
+            <div key={label} className="flex items-center gap-2">
+              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dot}`} />
+              <span>{label}</span>
+            </div>
+          ))}
         </div>
-
-        <div className="gov-card p-4">
-          <p className="text-sm font-medium text-gov-900 mb-3">System status</p>
-          <div className="space-y-2.5">
-            {[
-              ["Incident pipeline",   "Operational"],
-              ["Citizen reporting",   "Operational"],
-              ["WebSocket broadcast", "Operational"],
-              ["ML risk scoring",     "CatBoost active"],
-              ["Advisory engine",     "BRE active"],
-            ].map(([system, status]) => (
-              <div key={system} className="flex items-center justify-between">
-                <span className="text-xs text-gray-600">{system}</span>
-                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
-                  {status}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="gov-card p-4 sm:col-span-2 lg:col-span-1">
-          <p className="text-sm font-medium text-gov-900 mb-1">Demo data generator</p>
-          <p className="text-[11px] text-gray-400 mb-3 leading-relaxed">
-            Populates the system with realistic traffic events for the presentation.
-          </p>
-          <div className="grid grid-cols-2 gap-1.5 text-[11px] text-gray-500 mb-4">
-            {DEMO_ITEMS.map(({ label, dot }) => (
-              <div key={label} className="flex items-center gap-2">
-                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dot}`} />
-                <span>{label}</span>
-              </div>
-            ))}
-          </div>
-          {demoMsg && (
-            <p className={`text-[11px] mb-3 px-2.5 py-1.5 rounded-lg border ${
-              demoOk
-                ? "text-emerald-700 bg-emerald-50 border-emerald-100"
-                : "text-red-600 bg-red-50 border-red-100"
-            }`}>{demoMsg}</p>
-          )}
-          <button onClick={runDemo} disabled={demoLoading} className="gov-btn w-full disabled:opacity-50">
-            {demoLoading ? "Generating…" : "Generate demo data"}
-          </button>
-        </div>
-
+        {demoMsg && (
+          <p className={`text-[11px] mb-3 px-2.5 py-1.5 rounded-lg border ${
+            demoOk
+              ? "text-emerald-700 bg-emerald-50 border-emerald-100"
+              : "text-red-600 bg-red-50 border-red-100"
+          }`}>{demoMsg}</p>
+        )}
+        <button onClick={runDemo} disabled={demoLoading} className="gov-btn w-full disabled:opacity-50">
+          {demoLoading ? "Generating…" : "Generate demo data"}
+        </button>
       </div>
+
     </div>
   )
 }
