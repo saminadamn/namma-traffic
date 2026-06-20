@@ -9,67 +9,63 @@ interface NominatimResult { display_name: string; lat: string; lon: string }
 
 const FAQ_CATEGORIES = [
   {
-    label: "About the platform",
+    label: "What can I do here?",
     items: [
       {
         q: "What is Namma Traffic AI?",
-        a: "Namma Traffic AI is a smart traffic management platform built for Bengaluru. It combines AI-powered congestion prediction, citizen incident reporting, real-time heatmaps, and safe route planning in one unified interface. Version 1.0 was developed for the Gridlock Hackathon 2.0 under the Smart India Hackathon (SIH) sprint.",
+        a: "Namma Traffic AI is a smart traffic platform for Bengaluru. As a citizen you can report traffic incidents, find safe routes that avoid active closures, and view live hotspots across the city. Traffic authorities and field personnel get additional tools — congestion forecasting, resource planning, diversion generation, and a real-time command center.",
       },
       {
-        q: "What version is this and what features are included?",
-        a: "This is Namma Traffic AI v1.0 (SIH Sprint, June 2025). Features include: live incident heatmap (Leaflet), citizen reporting with photo upload and tracking IDs (NMT-YYYY-XXXXX format), AI congestion prediction (XGBoost, 15-minute forecasts), A* safe route finder that avoids active closures, authority command center with resource allocation, diversion plan generation, what-if scenario simulation, and multi-language support (English, Hindi, Kannada). Stack: FastAPI + PostgreSQL + OSMnx backend, Next.js 14 + Tailwind CSS frontend.",
+        q: "Do I need an account to use this?",
+        a: "No account is needed for citizens. You can view the live Traffic Hotspots map and plan safe routes without signing up. To report an incident and get a tracking ID, just fill in the report form — no registration required. Traffic Personnel and Authority officers sign in with government-issued credentials.",
       },
     ],
   },
   {
-    label: "For citizens",
+    label: "Reporting & tracking",
     items: [
       {
         q: "How do I report a traffic incident?",
-        a: "Tap 'Report incident' from the home page or navigate to /citizen/report. Select the incident category (accident, congestion, road closure, waterlogging, etc.), add a description, confirm your location, and optionally attach a photo. On submission you receive a unique tracking ID (e.g. NMT-2025-00123). Reports are queued for review by traffic personnel before authorities act on them.",
+        a: "From the home page choose 'I'm a citizen', or tap Report in the nav. Select the category (accident, congestion, road closure, waterlogging, etc.), describe what you see, pin your location, and optionally attach a photo. Hit Submit — you'll get a unique tracking ID like NMT-2025-00123 that you can use to follow up.",
       },
       {
-        q: "How do I track the status of my report?",
-        a: "Go to 'Track report' in the navigation bar and enter your tracking ID. You will see the current status (Pending → Verified → Resolved), the assigned officer if applicable, and timestamps for each stage. Status updates in real time as personnel verify and escalate the report.",
-      },
-      {
-        q: "How does the Safe Route feature work?",
-        a: "The Safe Route Finder uses A* graph search over Bengaluru's road network sourced from OpenStreetMap via OSMnx. Active road closures are removed from the graph entirely, and edges near accident zones are penalised with a higher travel cost. The algorithm finds the fastest safe path. Enter your origin and destination to get a colour-coded route on the map alongside the list of incidents it avoids.",
+        q: "How do I check what happened to my report?",
+        a: "Visit the Track page and enter your tracking ID. You'll see the current status — Pending (received), Verified (confirmed by traffic personnel), or Resolved (addressed). Each status update includes a timestamp so you know how fast the response was.",
       },
     ],
   },
   {
-    label: "AI & technology",
+    label: "Getting around Bengaluru",
     items: [
       {
-        q: "How accurate are the AI predictions?",
-        a: "The congestion prediction model (XGBoost) is trained on historical incident data, public event schedules, time-of-day patterns, and crowd density signals from Bengaluru's 18 monitored corridors. Internal testing shows 99.2% route accuracy and sub-3-second inference latency. Predictions are refreshed in 15-minute windows and cover events up to 24 hours ahead.",
+        q: "How do I find a safe route?",
+        a: "Go to Safe Route from the navigation. Enter your starting point and destination — the platform calculates a path that avoids active road closures and routes around accident zones. The map highlights your safe path in blue and shows the incidents it avoided in red.",
       },
       {
-        q: "What data sources does the platform use?",
-        a: "The platform ingests: citizen incident reports (real-time crowdsourced), historical incident records in PostgreSQL, OpenStreetMap road network data via OSMnx for routing, public event calendar feeds for congestion forecasting, and crowd density estimates derived from incident clustering. No CCTV or proprietary sensor infrastructure is required — the system is intentionally designed on open and crowdsourced data.",
+        q: "What does the Traffic Hotspots map show?",
+        a: "The Traffic Hotspots map shows live incident density across Bengaluru. Hotter zones mean more active incidents. You can filter by incident type (accident, congestion, closure, etc.) and tap any hotspot to see the details. The map updates in real time as new reports come in.",
       },
     ],
   },
   {
-    label: "For authorities",
+    label: "For traffic authorities",
     items: [
       {
-        q: "How do Traffic Personnel and Authority accounts differ?",
-        a: "Traffic Personnel are government-verified field reporters. Their incident reports are automatically pre-authenticated and skip the public review queue. Authority accounts (traffic control officers) access the full command center: AI congestion prediction, event simulation, what-if scenario analysis, resource allocation planning, diversion plan generation, report verification, and advanced analytics. Personnel log in via /traffic/login; authority staff via /authority/login.",
+        q: "What can authority officers do on this platform?",
+        a: "Authority officers get access to the full command center: view live incidents and predicted congestion zones, allocate officers and barricades using AI-suggested placements, generate diversion plans for affected corridors, simulate event scenarios, and verify or escalate citizen reports — all from one dashboard.",
       },
       {
-        q: "How does the command center help manage incidents?",
-        a: "The authority command center aggregates live incident data, predicted congestion zones, and resource availability into a single dashboard. Officers can accept or modify AI-suggested officer and barricade placements, generate turn-by-turn diversion plans for affected corridors, simulate hypothetical event scenarios to stress-test response plans, and verify or escalate citizen reports — all without switching tools.",
+        q: "How is Traffic Personnel different from an Authority account?",
+        a: "Traffic Personnel are government-verified field officers. They sign in at the Personnel login and their incident reports are automatically authenticated — no manual review needed. Authority accounts (control room officers) have full dashboard access including prediction, simulation, and resource planning tools.",
       },
     ],
   },
   {
-    label: "Privacy & support",
+    label: "Your data",
     items: [
       {
         q: "Is my location data stored permanently?",
-        a: "Precise coordinates attached to incident reports are stored in PostgreSQL for operational use by traffic authorities. After 90 days, report locations are rounded to the nearest 500 m area level and submitter details are anonymised. Route searches are not persisted server-side — they run against the OpenStreetMap Nominatim API directly from your browser. To remove a specific report, contact Bengaluru Traffic Police via the official helpline.",
+        a: "Location data attached to your incident report is used by traffic authorities to respond to the incident. After 90 days, precise coordinates are rounded to an area level and your details are anonymised. Route searches are never stored — they run directly in your browser. Contact Bengaluru Traffic Police via the official helpline to remove a specific report.",
       },
     ],
   },
@@ -367,7 +363,6 @@ export default function Home() {
           <div className="mb-10">
             <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">FAQ</h2>
             <p className="text-2xl font-bold text-gov-900">Frequently asked questions</p>
-            <p className="text-sm text-gray-400 mt-1">Namma Traffic AI · Version 1.0 · SIH Sprint · Gridlock Hackathon 2.0</p>
           </div>
           <div className="space-y-8">
             {FAQ_CATEGORIES.map((cat, ci) => (

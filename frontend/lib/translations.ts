@@ -65,7 +65,7 @@ export const STRINGS = {
   role_signin: "Sign in",
 
   // Footer
-  footer: "Namma AI · Smarter Roads. Safer Journeys. · Bengaluru Traffic Police · Gridlock Hackathon 2.0",
+  footer: "Namma AI · Smarter Roads. Safer Journeys. · Bengaluru Traffic Police",
 
   // Citizen — report page
   rpt_title: "Report an incident",
@@ -218,7 +218,7 @@ export const STATIC_TRANSLATIONS: Partial<Record<Language, Translations>> = {
     role_authority_desc: "पूर्वानुमान, सत्यापन, आवंटन",
     role_enter: "प्रवेश करें",
     role_signin: "साइन इन करें",
-    footer: "नम्मा AI · स्मार्ट सड़कें। सुरक्षित यात्राएँ। · बेंगलुरु ट्रैफिक पुलिस · ग्रिडलॉक हैकाथॉन 2.0",
+    footer: "नम्मा AI · स्मार्ट सड़कें। सुरक्षित यात्राएँ। · बेंगलुरु ट्रैफिक पुलिस",
     rpt_title: "घटना रिपोर्ट करें",
     rpt_desc: "बेंगलुरु ट्रैफिक पुलिस की तेज़ प्रतिक्रिया में मदद करें",
     rpt_category: "श्रेणी",
@@ -344,7 +344,7 @@ export const STATIC_TRANSLATIONS: Partial<Record<Language, Translations>> = {
     role_authority_desc: "ಊಹಿಸಿ, ಪರಿಶೀಲಿಸಿ, ಹಂಚಿಕೆ ಮಾಡಿ",
     role_enter: "ಪ್ರವೇಶಿಸಿ",
     role_signin: "ಸೈನ್ ಇನ್ ಮಾಡಿ",
-    footer: "ನಮ್ಮ AI · ಸ್ಮಾರ್ಟ್ ರಸ್ತೆಗಳು. ಸುರಕ್ಷಿತ ಪ್ರಯಾಣ. · ಬೆಂಗಳೂರು ಟ್ರಾಫಿಕ್ ಪೊಲೀಸ್ · ಗ್ರಿಡ್‌ಲಾಕ್ ಹ್ಯಾಕಥಾನ್ 2.0",
+    footer: "ನಮ್ಮ AI · ಸ್ಮಾರ್ಟ್ ರಸ್ತೆಗಳು. ಸುರಕ್ಷಿತ ಪ್ರಯಾಣ. · ಬೆಂಗಳೂರು ಟ್ರಾಫಿಕ್ ಪೊಲೀಸ್",
     rpt_title: "ಘಟನೆ ವರದಿ ಮಾಡಿ",
     rpt_desc: "ಬೆಂಗಳೂರು ಟ್ರಾಫಿಕ್ ಪೊಲೀಸರಿಗೆ ತ್ವರಿತ ಪ್ರತಿಕ್ರಿಯೆ ನೀಡಲು ಸಹಾಯ ಮಾಡಿ",
     rpt_category: "ವಿಭಾಗ",
