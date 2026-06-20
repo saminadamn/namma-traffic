@@ -431,12 +431,6 @@ export default function RoutePage() {
         </>
       )}
 
-      {!route && !loading && (
-        <div className="bg-gov-50 rounded-xl p-4">
-          <p className="text-xs font-medium text-gov-700 mb-1">{t("route_how_title")}</p>
-          <p className="text-[11px] text-gov-600 leading-relaxed">{t("route_how_body")}</p>
-        </div>
-      )}
     </div>
   )
 }

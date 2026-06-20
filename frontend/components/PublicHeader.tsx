@@ -73,7 +73,7 @@ export default function PublicHeader() {
       <div className="max-w-6xl mx-auto px-4 flex items-center justify-between h-14">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 flex-shrink-0" onClick={() => setOpen(false)}>
-          <img src="/assets/logo.png" alt="Namma AI" className="h-11 sm:h-9 w-auto object-contain" />
+          <img src="/assets/logo.png" alt="Namma AI" className="h-14 sm:h-10 w-auto object-contain" />
         </Link>
 
         {/* Desktop nav */}
