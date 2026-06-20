@@ -154,16 +154,17 @@ def resource_allocation(db=Depends(get_db)):
 
 
 @incidents_router.patch("/{incident_id}/complete")
-def complete_incident(incident_id: str, db=Depends(get_db)):
+async def complete_incident(incident_id: str, db=Depends(get_db)):
     """Authority ends an event — status → 'completed', releases all held resources."""
     from fastapi import HTTPException
     result = incident_service.complete_incident(db, incident_id)
     if result is None:
         raise HTTPException(status_code=404, detail="Incident not found")
+    await manager.broadcast_all("resources_updated", {"incident_id": incident_id, "status": "completed"})
     return result
 
 @incidents_router.patch("/{incident_id}/resolve")
-def resolve_incident(incident_id: str, db=Depends(get_db)):
+async def resolve_incident(incident_id: str, db=Depends(get_db)):
     """Mark an incident as resolved — releases its officers and barricades
     from the resource allocation count. Called by the Resources page when
     an officer confirms the event is over."""
@@ -171,6 +172,7 @@ def resolve_incident(incident_id: str, db=Depends(get_db)):
     result = incident_service.resolve_incident(db, incident_id)
     if result is None:
         raise HTTPException(status_code=404, detail="Incident not found")
+    await manager.broadcast_all("resources_updated", {"incident_id": incident_id, "status": "resolved"})
     return result
 
 @incidents_router.post("")

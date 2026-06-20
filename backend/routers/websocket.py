@@ -59,6 +59,17 @@ class ConnectionManager:
             except Exception:
                 self.disconnect(conn.websocket)
 
+    async def broadcast_all(self, event_type: str, data: dict) -> None:
+        """Sends to ALL connected clients regardless of viewport.
+        Used for dashboard-level events (resources_updated, stats_changed)
+        that every authority client needs to know about immediately."""
+        message = {"type": event_type, "data": data}
+        for conn in list(self._connections):
+            try:
+                await conn.websocket.send_json(message)
+            except Exception:
+                self.disconnect(conn.websocket)
+
 
 manager = ConnectionManager()
 

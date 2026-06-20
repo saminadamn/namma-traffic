@@ -41,7 +41,25 @@ export default function Dashboard() {
   useEffect(() => {
     load()
     const t = setInterval(load, 15000)
-    return () => clearInterval(t)
+
+    // WebSocket: instant refresh when an incident is resolved/completed
+    const wsBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000")
+      .replace(/^https/, "wss").replace(/^http/, "ws")
+    let ws: WebSocket | null = null
+    try {
+      ws = new WebSocket(`${wsBase}/ws/incidents`)
+      ws.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data)
+          if (msg.type === "resources_updated") load()
+        } catch {}
+      }
+    } catch {}
+
+    return () => {
+      clearInterval(t)
+      ws?.close()
+    }
   }, [])
 
   const runDemo = async () => {
