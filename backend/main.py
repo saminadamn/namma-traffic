@@ -39,6 +39,33 @@ async def _migrate():
         logger.error("Migration error: %s", exc)
 
 
+async def _ensure_schema():
+    """Guarantee critical columns exist regardless of Alembic migration state.
+    Runs every startup — all statements use IF NOT EXISTS so they are no-ops
+    when the column already exists."""
+    try:
+        from core.database import SessionLocal
+        from sqlalchemy import text
+        cols = [
+            "ALTER TABLE incidents ADD COLUMN IF NOT EXISTS road_status  VARCHAR(32)",
+            "ALTER TABLE incidents ADD COLUMN IF NOT EXISTS affected_road TEXT",
+            "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS authenticated BOOLEAN NOT NULL DEFAULT FALSE",
+            "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS veh_type VARCHAR(50)",
+            "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS incident_type VARCHAR(20) DEFAULT 'unplanned'",
+            "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS closure_probability FLOAT",
+            "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS priority_probability FLOAT",
+            "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS risk_score SMALLINT",
+            "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS risk_band VARCHAR(20)",
+        ]
+        with SessionLocal() as db:
+            for stmt in cols:
+                db.execute(text(stmt))
+            db.commit()
+        logger.info("Schema columns verified")
+    except Exception as exc:
+        logger.warning("Schema ensure skipped: %s", exc)
+
+
 async def _score_pending():
     """Score any pending reports that arrived without ML scores (e.g. before a
     deploy that added inline scoring).  Runs once on startup, non-blocking."""
@@ -56,6 +83,7 @@ async def _score_pending():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     asyncio.create_task(_migrate())       # non-blocking: server starts immediately
+    asyncio.create_task(_ensure_schema()) # guarantee columns exist regardless of migration state
     asyncio.create_task(_score_pending()) # score unscored pending reports
     app.state.model_service = model_service
     logger.info("Namma Traffic API started (models load on first predict)")
