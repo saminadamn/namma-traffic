@@ -79,7 +79,9 @@ export const getCommandCenter = ()                         => api<CommandCenterS
 export const generateDemoData = (b?: Partial<DemoDataRequest>) =>
   api<DemoDataResponse>("/generate-demo-data", { method: "POST", body: JSON.stringify(b || {}) })
 export const getPriorityRanking  = (limit = 10) => api<Incident[]>(`/api/incidents/priority-ranking?limit=${limit}`)
-export const resolveIncident     = (id: string) => api<Incident>(`/api/incidents/${id}/resolve`, { method: "PATCH" })
+export const resolveIncident     = (id: string)   => api<Incident>(`/api/incidents/${id}/resolve`, { method: "PATCH" })
+export const getDiversionPlan   = (id: string)   => api<DiversionPlan>("/api/diversion/plan", { method: "POST", body: JSON.stringify({ incident_id: id }) })
+export const getDiversionStatus = ()             => api<{ status: string; version: string; database: string }>("/api/diversion/status")
 export const completeIncident    = (id: string) => api<Incident>(`/api/incidents/${id}/complete`, { method: "PATCH" })
 
 // ── Predict input / output ───────────────────────────────────────────────────
@@ -177,6 +179,24 @@ export interface CommandCenterSummary {
 // ── Feature 7: Demo Data Generator ──────────────────────────────────────────
 export interface DemoDataRequest { accidents: number; roadblocks: number; congestion_spikes: number; emergency_calls: number }
 export interface DemoDataResponse { generated_at: string; total_created: number; breakdown: Record<string, number>; incidents: Record<string, Incident[]> }
+
+// ── Diversion Planning Engine ────────────────────────────────────────────────
+export interface DiversionRoad {
+  road_name: string
+  priority: number
+  road_type?: string | null
+  distance_from_incident_m?: number | null
+}
+
+export interface DiversionPlan {
+  incident_id:            string
+  affected_road:          string
+  road_status:            "CLOSED" | "PARTIALLY_BLOCKED" | "CONGESTED" | "UNKNOWN"
+  severity:               "HIGH" | "MEDIUM" | "LOW"
+  diversion_required:     boolean
+  recommended_diversions: DiversionRoad[]
+  message?:               string | null
+}
 
 // ── Safe Route ───────────────────────────────────────────────────────────────
 export const getRoute = (b: RouteRequest) =>
