@@ -91,6 +91,11 @@ def _report_to_dict(r: CitizenReport) -> dict:
         "photo_url": r.photo_url,
         "status": r.status,
         "created_at": r.created_at.isoformat() if r.created_at else None,
+        # ML scores — None until the background worker runs
+        "closure_probability": r.closure_probability,
+        "priority_probability": r.priority_probability,
+        "risk_score": r.risk_score,
+        "risk_band": r.risk_band,
     }
 
 
@@ -366,8 +371,40 @@ def list_reports(db: Session, status: str | None = None) -> list[dict]:
     q = db.query(CitizenReport)
     if status:
         q = q.filter(CitizenReport.status == status)
-    rows = q.order_by(CitizenReport.created_at.desc()).all()
+    # Pending queue: highest ML risk score first so authorities triage correctly.
+    # All other views: newest first.
+    if status == "pending":
+        from sqlalchemy import nullslast
+        rows = q.order_by(nullslast(CitizenReport.risk_score.desc()), CitizenReport.created_at.desc()).all()
+    else:
+        rows = q.order_by(CitizenReport.created_at.desc()).all()
     return [_report_to_dict(r) for r in rows]
+
+
+def corridor_risk(db: Session, limit: int = 6) -> list[dict]:
+    """Aggregate active incidents by corridor → risk bar data for the dashboard.
+    Risk is a blend of average severity (0-100) and incident count bonus."""
+    rows = (
+        db.query(
+            Incident.corridor,
+            func.count(Incident.id).label("count"),
+            func.avg(Incident.severity_score).label("avg_severity"),
+        )
+        .filter(Incident.status == "active")
+        .filter(Incident.corridor.isnot(None))
+        .filter(Incident.corridor != "Unknown")
+        .group_by(Incident.corridor)
+        .order_by(func.count(Incident.id).desc())
+        .limit(limit)
+        .all()
+    )
+    result = []
+    for row in rows:
+        count_bonus = min(row.count * 4, 25)          # up to +25 for volume
+        avg_sev = round(row.avg_severity or 50, 1)
+        risk = min(100, int(avg_sev + count_bonus))
+        result.append({"name": row.corridor, "risk": risk, "count": row.count})
+    return result
 
 
 def _to_uuid_or_400(raw_id: str, label: str) -> uuid.UUID:

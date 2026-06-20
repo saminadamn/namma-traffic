@@ -1,98 +1,230 @@
 "use client"
-import { useEffect, useState } from "react"
-import { getReports, verifyReport, type Report } from "@/lib/api"
+import { useEffect, useState, useCallback } from "react"
+import { getPendingReports, verifyReport, getReports, type Report } from "@/lib/api"
 
-const STATUS_BADGE: Record<string, string> = {
-  pending:  "bg-amber-100 text-amber-800",
-  approved: "bg-emerald-100 text-emerald-800",
-  rejected: "bg-gray-100 text-gray-600",
+const BAND_BG: Record<string, string> = {
+  Low:      "bg-emerald-50 text-emerald-700 border-emerald-200",
+  Moderate: "bg-amber-50 text-amber-700 border-amber-200",
+  High:     "bg-orange-50 text-orange-700 border-orange-200",
+  Critical: "bg-red-50 text-red-700 border-red-200",
+}
+const BAND_BORDER: Record<string, string> = {
+  Low: "border-l-emerald-500", Moderate: "border-l-amber-500",
+  High: "border-l-orange-500", Critical: "border-l-red-500",
+}
+const BAND_NUM: Record<string, string> = {
+  Low: "text-emerald-700", Moderate: "text-amber-700",
+  High: "text-orange-700", Critical: "text-red-700",
+}
+const BAND_BAR: Record<string, string> = {
+  Low: "bg-emerald-500", Moderate: "bg-amber-500",
+  High: "bg-orange-500", Critical: "bg-red-500",
 }
 
-const CATEGORY_SEVERITY: Record<string, string> = {
-  "waterlogging": "Medium", "signal failure": "Low", "tree fall": "Medium",
-  "accident": "High", "debris": "Critical", "construction": "Medium",
-  "vehicle breakdown": "Low", "public event": "High", "protest": "High",
-}
-const severityBadge = (cat: string) => {
-  const label = CATEGORY_SEVERITY[cat.toLowerCase()] ?? "Medium"
-  return { label, cls: label === "Critical" ? "badge-critical" : label === "High" ? "badge-high" : label === "Medium" ? "badge-medium" : "badge-low" }
+function StatusPill({ status }: { status: string }) {
+  const cfg =
+    status === "pending"  ? "bg-amber-50 text-amber-700 border-amber-200" :
+    status === "approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                            "bg-gray-100 text-gray-500 border-gray-200"
+  const label =
+    status === "pending"  ? "Awaiting verification" :
+    status === "approved" ? "Verified" : "Rejected"
+  return (
+    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${cfg}`}>{label}</span>
+  )
 }
 
-export default function VerifyPage() {
-  const [reports, setReports] = useState<Report[]>([])
-  const [filter, setFilter]   = useState("pending")
-  const [loading, setLoading] = useState(true)
+export default function ReportsQueuePage() {
+  const [pending,    setPending]    = useState<Report[]>([])
+  const [verified,   setVerified]   = useState<Report[]>([])
+  const [tab,        setTab]        = useState<"pending" | "verified">("pending")
+  const [loading,    setLoading]    = useState(true)
+  const [verifying,  setVerifying]  = useState<string | null>(null)
 
-  const load = () => {
+  const reload = useCallback(async () => {
     setLoading(true)
-    getReports(filter).then(setReports).catch(() => setReports([])).finally(() => setLoading(false))
-  }
-  useEffect(load, [filter])
+    try {
+      const [p, v] = await Promise.all([
+        getPendingReports(),
+        getReports("status=approved"),
+      ])
+      setPending(p)
+      setVerified(v)
+    } catch { /* keep stale data */ }
+    finally { setLoading(false) }
+  }, [])
 
-  const act = async (id: string, action: "approve" | "reject") => {
-    await verifyReport({ report_id: id, action }).catch(() => {})
-    setReports(rs => rs.map(r => r.id === id ? { ...r, status: action === "approve" ? "approved" : "rejected" } : r))
+  useEffect(() => { reload() }, [reload])
+
+  const act = async (report: Report, action: "approve" | "reject") => {
+    setVerifying(report.id)
+    try {
+      await verifyReport({ report_id: report.id, action })
+      await reload()
+    } catch { /* toast would go here */ }
+    finally { setVerifying(null) }
   }
+
+  const displayed = tab === "pending" ? pending : verified
 
   return (
-    <div className="p-3 sm:p-6">
-      {/* Header — stacks on mobile, side-by-side on sm+ */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-        <div>
-          <h1 className="text-base font-medium text-gov-900">Verify citizen reports</h1>
-          <p className="text-xs text-gray-400 mt-0.5">Review and approve incoming reports</p>
-        </div>
-        <div className="flex gap-1.5 flex-wrap">
-          {["pending", "approved", "rejected"].map(s => (
-            <button key={s} onClick={() => setFilter(s)}
-              className={`text-xs px-3 py-1.5 rounded-full border capitalize transition-colors ${filter === s ? "bg-gov-500 text-white border-gov-500" : "bg-white border-gray-300 text-gray-600 hover:bg-gray-50"}`}>
-              {s}
-            </button>
-          ))}
-        </div>
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+      <div className="mb-5">
+        <h1 className="text-base font-semibold text-gov-900">Reports queue</h1>
+        <p className="text-xs text-gray-400 mt-0.5">
+          Citizen reports sorted by ML risk score — verify to promote to active incident
+        </p>
       </div>
 
-      {loading ? (
-        <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-24 bg-gray-100 rounded-xl animate-pulse" />)}</div>
-      ) : reports.length === 0 ? (
-        <div className="gov-card p-10 text-center text-xs text-gray-400">No {filter} reports</div>
-      ) : (
-        <div className="space-y-3">
-          {reports.map(r => {
-            const sb = severityBadge(r.category)
-            return (
-              <div key={r.id} className="gov-card p-4">
-                {/* Top row — meta + action buttons stack on mobile */}
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-800 mb-1">
-                      {r.category} — <span className="text-gray-500">{r.address}</span>
-                    </p>
-                    {/* Badges on their own line so they don't overflow */}
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full capitalize ${STATUS_BADGE[r.status]}`}>{r.status}</span>
-                      <span className={sb.cls}>{sb.label}</span>
-                    </div>
-                    <p className="text-[11px] text-gray-400 mb-1">{r.tracking_id} · {new Date(r.created_at).toLocaleString("en-IN")}</p>
-                    <p className="text-xs text-gray-700">{r.description}</p>
+      {/* Tabs */}
+      <div className="flex items-center gap-1 mb-4">
+        {([
+          { key: "pending",  label: "Awaiting verification", count: pending.length,  active: "bg-amber-500 text-white",   badge: "bg-white/20 text-white" },
+          { key: "verified", label: "Verified",              count: verified.length, active: "bg-emerald-600 text-white", badge: "bg-white/20 text-white" },
+        ] as const).map(({ key, label, count, active, badge }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+              tab === key ? active : "text-gray-500 hover:bg-gray-100"
+            }`}
+          >
+            {label}
+            <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full ${
+              tab === key ? badge : "bg-gray-100 text-gray-600"
+            }`}>{count}</span>
+          </button>
+        ))}
+        <div className="flex-1" />
+        <button
+          onClick={reload}
+          className="text-[11px] text-gray-400 hover:text-gov-500 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+          </svg>
+          Refresh
+        </button>
+      </div>
+
+      {/* List */}
+      <div className="space-y-2">
+        {loading && (
+          <div className="gov-card p-10 text-center">
+            <span className="w-5 h-5 border-2 border-gov-400 border-t-transparent rounded-full animate-spin inline-block" />
+            <p className="text-xs text-gray-400 mt-2">Loading…</p>
+          </div>
+        )}
+
+        {!loading && displayed.length === 0 && (
+          <div className="gov-card p-10 text-center border-dashed">
+            <p className="text-xs text-gray-500 font-medium">
+              {tab === "pending" ? "No pending reports" : "No verified reports yet"}
+            </p>
+            <p className="text-[11px] text-gray-400 mt-1">
+              {tab === "pending"
+                ? "All citizen reports have been reviewed."
+                : "Approve a pending report to see it here."}
+            </p>
+          </div>
+        )}
+
+        {!loading && displayed.map(r => {
+          const band        = r.risk_band || "Low"
+          const hasScore    = r.risk_score != null
+          const closurePct  = r.closure_probability != null ? Math.round(r.closure_probability * 100) : null
+          const isActioning = verifying === r.id
+
+          return (
+            <div
+              key={r.id}
+              className={`gov-card p-4 border-l-4 ${hasScore ? (BAND_BORDER[band] || "border-l-gray-200") : "border-l-gray-200"}`}
+            >
+              <div className="flex items-start gap-4">
+                {/* Left: report info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-mono text-gray-400">{r.tracking_id}</span>
+                    <span className="text-[10px] text-gray-300">·</span>
+                    <span className="text-[10px] text-gray-400">
+                      {new Date(r.created_at).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
+                    </span>
+                    {!hasScore && tab === "pending" && (
+                      <span className="text-[10px] text-gray-400 italic">· ML scoring in progress…</span>
+                    )}
                   </div>
-                  {r.status === "pending" && (
-                    <div className="flex gap-2 sm:flex-shrink-0">
-                      <button onClick={() => act(r.id, "approve")}
-                        className="flex-1 sm:flex-none text-xs px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200 hover:bg-emerald-100">
-                        Approve
+                  <p className="text-xs font-semibold text-gray-900">
+                    {r.category}
+                  </p>
+                  <p className="text-[11px] text-gray-500 mt-0.5 truncate">{r.address}</p>
+                  {r.description && (
+                    <p className="text-[11px] text-gray-400 mt-0.5 truncate">{r.description}</p>
+                  )}
+                </div>
+
+                {/* Middle: ML scores */}
+                <div className="flex-shrink-0 text-right space-y-1.5 min-w-[120px]">
+                  {hasScore ? (
+                    <>
+                      <div className="flex items-center justify-end gap-2">
+                        <div className="h-1 bg-gray-100 rounded-full overflow-hidden w-16">
+                          <div
+                            className={`h-full rounded-full ${BAND_BAR[band] || "bg-gray-400"}`}
+                            style={{ width: `${r.risk_score}%` }}
+                          />
+                        </div>
+                        <span className={`text-sm font-bold tabular-nums ${BAND_NUM[band] || "text-gray-600"}`}>
+                          {r.risk_score}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="text-[10px] text-gray-400">Closure</span>
+                        <span className={`text-[10px] font-semibold ${(closurePct ?? 0) > 50 ? "text-red-600" : "text-emerald-600"}`}>
+                          {closurePct != null ? `${closurePct}%` : "—"}
+                        </span>
+                      </div>
+                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded border inline-block ${BAND_BG[band] || "bg-gray-50 text-gray-500 border-gray-200"}`}>
+                        {band}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-[10px] text-gray-400 italic">Scoring…</span>
+                  )}
+                </div>
+
+                {/* Right: action buttons or status */}
+                <div className="flex-shrink-0 flex flex-col items-end justify-center gap-1.5 min-w-[100px]">
+                  {tab === "pending" ? (
+                    <>
+                      <button
+                        onClick={() => act(r, "approve")}
+                        disabled={!!verifying}
+                        className="w-full text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                      >
+                        {isActioning ? "…" : "Verify"}
                       </button>
-                      <button onClick={() => act(r.id, "reject")}
-                        className="flex-1 sm:flex-none text-xs px-3 py-1.5 bg-red-50 text-red-700 rounded-lg border border-red-200 hover:bg-red-100">
-                        Reject
+                      <button
+                        onClick={() => act(r, "reject")}
+                        disabled={!!verifying}
+                        className="w-full text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                      >
+                        {isActioning ? "…" : "Reject"}
                       </button>
-                    </div>
+                    </>
+                  ) : (
+                    <StatusPill status={r.status} />
                   )}
                 </div>
               </div>
-            )
-          })}
-        </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {!loading && tab === "pending" && pending.length > 0 && (
+        <p className="text-[11px] text-gray-400 mt-4 text-center">
+          Sorted highest risk first · verifying a report creates a live incident on the map
+        </p>
       )}
     </div>
   )

@@ -40,6 +40,8 @@ export const predictEvent     = (b: EventInput)  => api<PredictionOutput>("/api/
 export const getIncidents     = (p?: string)     => api<Incident[]>(`/api/incidents${p ? "?" + p : ""}`)
 export const getIncidentStats = ()               => api<IncidentStats>("/api/incidents/stats")
 export const getReports       = (s?: string)     => api<Report[]>(`/api/reports${s ? "?status=" + s : ""}`)
+export const getPendingReports = ()              => api<Report[]>("/api/reports?status=pending")
+export const getCorridorRisk  = ()               => api<CorridorRisk[]>("/api/incidents/corridor-risk")
 export const verifyReport     = (b: object)      => api("/api/reports/verify", { method: "PATCH", body: JSON.stringify(b) })
 export const submitReport     = (f: FormData)    => fetch(`${BASE}/api/reports`, { method: "POST", body: f }).then(r => r.json())
 export const getHeatmap       = (c?: string)     => api<HeatmapData>(`/api/heatmap${c ? "?cause=" + c : ""}`)
@@ -99,7 +101,13 @@ export interface IncidentStats { total: number; active: number; high_priority: n
 export interface Report {
   id: string; tracking_id: string; category: string; description: string; address: string
   latitude: number; longitude: number; photo_url?: string; status: string; created_at: string
+  closure_probability?: number | null
+  priority_probability?: number | null
+  risk_score?: number | null
+  risk_band?: string | null
 }
+
+export interface CorridorRisk { name: string; risk: number; count: number }
 export interface HeatmapData { points: [number, number, number][]; total: number }
 export interface Hotspot { junction: string; count: number; lat: number; lon: number; dominant_cause: string }
 export interface Analytics {

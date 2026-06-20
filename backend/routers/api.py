@@ -107,6 +107,11 @@ def priority_ranking(limit: int = 10, db=Depends(get_db)):
     data, ranked a different way, not a new resource."""
     return incident_service.top_priority_incidents(db, limit=limit)
 
+@incidents_router.get("/corridor-risk")
+def corridor_risk(db=Depends(get_db)):
+    """Active incident severity aggregated by corridor — powers dashboard risk bars."""
+    return incident_service.corridor_risk(db)
+
 @incidents_router.post("")
 async def create_incident(inc: IncidentCreate, db=Depends(get_db)):
     incident_dict, was_new = incident_service.create_incident(db, inc.model_dump())

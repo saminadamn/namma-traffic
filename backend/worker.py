@@ -100,6 +100,51 @@ async def geocode_report(ctx, report_id: str) -> None:
             db.commit()
             logger.info("geocode_report: report %s -> %s", report_id, address)
 
+        # ── ML scoring ────────────────────────────────────────────────────────
+        # Run CatBoost + BRE on the report so the authority queue can be sorted
+        # by risk_score DESC instead of FIFO. Failures are non-fatal — the
+        # report stays visible, just without a score (shown as "Scoring…").
+        try:
+            from services import catboost_service, rules_engine
+            from datetime import datetime as _dt, timezone
+
+            now = _dt.now(timezone.utc)
+            event_cause = (report.category or "others").lower().replace(" ", "_")
+
+            ml = catboost_service.predict(
+                event_type=event_cause,
+                latitude=report.latitude,
+                longitude=report.longitude,
+                event_cause=event_cause,
+                authenticated=report.reporter_id is not None,
+                veh_type=None,
+                start_datetime=now.isoformat(),
+                description=report.description or "",
+            )
+            bre = rules_engine.evaluate(
+                closure_probability=ml["closure_probability"],
+                closure_prediction=ml["closure_prediction"],
+                priority_probability=ml["priority_probability"],
+                priority_prediction=ml["priority_prediction"],
+                event_cause=event_cause,
+                date=now.strftime("%Y-%m-%d"),
+                time=now.strftime("%H:%M"),
+            )
+            report = db.get(CitizenReport, report_id)   # re-fetch after potential address commit
+            if report:
+                report.closure_probability = ml["closure_probability"]
+                report.priority_probability = ml["priority_probability"]
+                report.risk_score = bre["risk_score"]
+                report.risk_band = bre["risk_band"]
+                db.commit()
+                logger.info(
+                    "geocode_report: scored %s → risk=%s (%s)",
+                    report_id, bre["risk_score"], bre["risk_band"],
+                )
+        except Exception as ml_exc:
+            logger.warning("geocode_report: ML scoring skipped for %s: %s", report_id, ml_exc)
+            db.rollback()
+
     except Exception as exc:
         logger.warning("geocode_report failed for %s: %s", report_id, exc)
         db.rollback()

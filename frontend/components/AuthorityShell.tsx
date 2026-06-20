@@ -22,7 +22,7 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
     { href: "/authority/what-if",        label: t("nav_whatif"),          icon: "◑" },
     { href: "/authority/heatmap",        label: t("nav_heatmap_auth"),    icon: "◉" },
     { href: "/authority/resources",      label: t("nav_resources"),       icon: "◐" },
-    { href: "/authority/verify",         label: t("nav_verify"),          icon: "✓" },
+    { href: "/authority/verify",         label: t("nav_verify"),          icon: "◫" },
     { href: "/authority/analytics",      label: t("nav_analytics"),       icon: "▤" },
   ]
 
