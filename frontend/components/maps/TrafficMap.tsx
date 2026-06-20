@@ -157,7 +157,7 @@ export default function TrafficMap({ height = 480, onHotspotsChange }: Props) {
           <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
             wsLive ? "bg-emerald-500 animate-pulse" : "bg-gray-400"
           }`} />
-          {wsLive ? (pulse ? "Updated!" : "Live") : "Connecting…"}
+          {wsLive ? "Live" : "Connecting…"}
           {lastUpdated && wsLive && (
             <span className="opacity-60 hidden sm:inline">
               · {lastUpdated.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}

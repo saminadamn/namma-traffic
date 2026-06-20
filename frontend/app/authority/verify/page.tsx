@@ -225,7 +225,7 @@ export default function ReportsQueuePage() {
                       {new Date(r.created_at).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
                     </span>
                     {!hasScore && tab === "pending" && (
-                      <span className="text-[10px] text-gray-400 italic">· ML scoring…</span>
+                      <span className="text-[10px] text-gray-400 italic">· Scoring in progress</span>
                     )}
                   </div>
                   <p className="text-xs font-semibold text-gray-900 capitalize">
@@ -259,18 +259,16 @@ export default function ReportsQueuePage() {
                         </span>
                       </div>
                       <div className="flex items-center justify-end gap-1.5">
-                        {/* Severity from risk_score */}
                         <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded border inline-block ${BAND_BG[band] || "bg-gray-50 text-gray-500 border-gray-200"}`}>
                           {band}
                         </span>
-                        {/* CatBoost binary priority — shown only when it differs or adds context */}
                         {mlPriority && (
                           <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded border inline-block ${
                             mlPriority === "High"
                               ? "bg-red-50 text-red-700 border-red-200"
                               : "bg-gray-50 text-gray-500 border-gray-200"
                           }`}>
-                            ML: {mlPriority}
+                            {mlPriority} priority
                           </span>
                         )}
                       </div>

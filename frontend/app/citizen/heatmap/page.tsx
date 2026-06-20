@@ -53,11 +53,7 @@ export default function HeatmapPage() {
       {/* Live hotspot cards */}
       {hotspots.length > 0 && (
         <div>
-          <p className={`text-xs font-medium mb-2 transition-colors ${
-            newFlash ? "text-emerald-600" : "text-gray-500"
-          }`}>
-            {newFlash ? "↑ Hotspots updated" : "Top congestion hotspots"}
-          </p>
+          <p className="text-xs font-medium text-gray-500 mb-2">Top congestion hotspots</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {hotspots.slice(0, 4).map(h => (
               <div key={h.junction} className={`gov-card p-3 sm:p-4 transition-all duration-500 ${

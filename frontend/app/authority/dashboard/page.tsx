@@ -166,7 +166,7 @@ export default function Dashboard() {
       <div className="gov-card p-4 mb-4">
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm font-medium text-gov-900">Top priority incidents</p>
-          <span className="hidden sm:inline text-[10px] text-gray-400">severity · congestion · proximity · closure probability</span>
+          <span className="hidden sm:inline text-[10px] text-gray-400">ranked by severity · congestion · closure risk</span>
         </div>
         {topPriority.length === 0 ? <p className="text-xs text-gray-400">No active incidents to rank.</p> : (
           <div className="space-y-2">
@@ -192,8 +192,8 @@ export default function Dashboard() {
       {allocation.length > 0 && (
         <div className="gov-card p-4 mb-4">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-medium text-gov-900">ML resource allocation</p>
-            <span className="text-[10px] text-gray-400">CatBoost closure probability → officers · barricades</span>
+            <p className="text-sm font-medium text-gov-900">Resource deployment plan</p>
+            <span className="text-[10px] text-gray-400">Computed from incident severity and closure risk</span>
           </div>
           <div className="grid grid-cols-4 text-[10px] text-gray-400 font-medium px-1 mb-1.5">
             <span className="col-span-2">Incident</span>
@@ -205,27 +205,24 @@ export default function Dashboard() {
               <div key={a.incident_id} className="grid grid-cols-4 items-center py-1.5 px-1 rounded-lg hover:bg-gray-50">
                 <div className="col-span-2 min-w-0 pr-2">
                   <p className="text-xs font-medium text-gray-800 truncate">{a.address}</p>
-                  <p className="text-[10px] text-gray-400">
-                    {a.event_cause?.replace(/_/g, " ")} · {Math.round(a.closure_probability * 100)}% closure risk
-                    {a.diversion_required && <span className="ml-1 text-red-500">· diversion</span>}
+                  <p className="text-[10px] text-gray-400 capitalize">
+                    {a.event_cause?.replace(/_/g, " ")}
+                    {a.diversion_required && <span className="ml-1 text-red-500">· diversion needed</span>}
                   </p>
                 </div>
                 <div className="text-center">
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-gov-700 bg-gov-50 px-2 py-0.5 rounded-full">
-                    👮 {a.officers_needed}
+                  <span className="text-xs font-semibold text-gov-700 bg-gov-50 px-2 py-0.5 rounded-full border border-gov-100">
+                    {a.officers_needed}
                   </span>
                 </div>
                 <div className="text-center">
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
-                    🚧 {a.barricades_needed}
+                  <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">
+                    {a.barricades_needed}
                   </span>
                 </div>
               </div>
             ))}
           </div>
-          <p className="text-[10px] text-gray-400 mt-3 leading-relaxed">
-            Allocation computed from ML closure probability · priority · event cause minimums
-          </p>
         </div>
       )}
 

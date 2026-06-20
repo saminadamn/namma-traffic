@@ -72,13 +72,14 @@ export default function DiversionPage() {
       <div className="mb-5">
         <h1 className="text-base font-medium text-gov-900">Diversion Plan</h1>
         <p className="text-xs text-gray-400 mt-0.5">
-          Generate ML-matched road diversion recommendations for active incidents
+          Road network analysis and alternative route recommendations for active incidents
         </p>
       </div>
 
       {incidents.length === 0 ? (
         <div className="gov-card p-8 text-center">
-          <p className="text-sm text-gray-400">No active incidents — nothing to divert.</p>
+          <p className="text-sm text-gray-400">No active incidents at this time.</p>
+          <p className="text-xs text-gray-300 mt-1">Diversion plans will appear here once incidents are reported.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -148,9 +149,6 @@ export default function DiversionPage() {
                 {/* Diversion plan result */}
                 {plan && (
                   <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
-                    <p className="text-[10px] font-semibold text-gov-600 font-mono mb-2">
-                      {token} · Diversion plan
-                    </p>
                     <div className="flex items-center gap-3 flex-wrap mb-3">
                       <div>
                         <p className="text-[10px] text-gray-400 mb-0.5">Affected road</p>
@@ -182,9 +180,7 @@ export default function DiversionPage() {
 
                     {plan.recommended_diversions.length > 0 ? (
                       <>
-                        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                          Recommended alternative roads
-                        </p>
+                        <p className="text-[10px] font-medium text-gray-500 mb-2">Alternative routes</p>
                         <div className="space-y-1.5">
                           {plan.recommended_diversions.map(road => (
                             <div
