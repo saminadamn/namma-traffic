@@ -18,6 +18,7 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
     { href: "/authority/dashboard",  label: t("nav_dashboard"),        icon: "▦" },
     { href: "/authority/verify",     label: t("nav_verify"),           icon: "◫" },
     { href: "/authority/resources",  label: t("nav_resources"),        icon: "◐" },
+    { href: "/authority/diversion",  label: t("nav_diversion"),        icon: "↔" },
     { href: "/authority/predict",    label: t("nav_predict_demo"),     icon: "◈" },
     { href: "/authority/heatmap",    label: t("nav_heatmap_auth"),     icon: "◉" },
     { href: "/authority/analytics",  label: t("nav_analytics_month"),  icon: "▤" },

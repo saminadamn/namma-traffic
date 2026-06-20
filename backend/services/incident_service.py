@@ -260,8 +260,12 @@ def incidents_in_bbox(db: Session, min_lat: float, min_lon: float, max_lat: floa
 def incident_stats(db: Session) -> dict:
     total = db.query(func.count(Incident.id)).scalar()
     active = db.query(func.count(Incident.id)).filter(Incident.status == "active").scalar()
-    high_priority = db.query(func.count(Incident.id)).filter(Incident.priority == "High").scalar()
-    road_closures = db.query(func.count(Incident.id)).filter(Incident.requires_road_closure.is_(True)).scalar()
+    high_priority = db.query(func.count(Incident.id)).filter(
+        Incident.status == "active", Incident.priority == "High"
+    ).scalar()
+    road_closures = db.query(func.count(Incident.id)).filter(
+        Incident.status == "active", Incident.requires_road_closure.is_(True)
+    ).scalar()
     return {
         "total": total or 0,
         "active": active or 0,

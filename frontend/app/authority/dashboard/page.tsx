@@ -80,8 +80,8 @@ export default function Dashboard() {
   const get = (key: keyof CommandCenterSummary) => summary ? String(summary[key]) : "—"
 
   const incidentKpis = [
-    { label: "Active incidents", value: stats?.active        ?? "—", color: "text-amber-700" },
     { label: "High priority",    value: stats?.high_priority ?? "—", color: "text-red-700"   },
+    { label: "Active incidents", value: stats?.active        ?? "—", color: "text-amber-700" },
     { label: "Road closures",    value: stats?.road_closures ?? "—", color: "text-red-700"   },
     { label: "Total tracked",    value: stats?.total         ?? "—", color: "text-gov-900"   },
   ]
