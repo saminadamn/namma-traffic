@@ -97,7 +97,7 @@ export default function Home() {
           <div>
             <div className="inline-flex items-center gap-2 bg-white border border-gray-200 text-gov-700 text-xs font-medium px-3 py-1.5 rounded-full mb-5">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-              Live · Bengaluru Traffic Intelligence
+              {t("hero_live_badge")}
             </div>
 
             <h1 className="text-3xl md:text-5xl font-bold text-gov-900 leading-tight tracking-tight">
@@ -125,9 +125,9 @@ export default function Home() {
         {/* Stats strip */}
         <div className="max-w-6xl mx-auto px-4 pb-5 flex flex-wrap gap-4 sm:gap-8">
           {[
-            { val: "2.4M+", label: "Daily commuters served" },
-            { val: "< 3s",  label: "AI prediction latency" },
-            { val: "99.2%", label: "Route accuracy" },
+            { val: "2.4M+", label: t("stat_commuters") },
+            { val: "< 3s",  label: t("stat_latency") },
+            { val: "99.2%", label: t("stat_accuracy") },
           ].map((s, i, arr) => (
             <div key={s.label} className="flex items-center gap-4">
               <div>
@@ -145,7 +145,7 @@ export default function Home() {
         {userRole === "traffic_personnel" ? (
           /* ── Personnel: quick actions, no citizen card ── */
           <>
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Quick access</h2>
+            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">{t("lbl_quick_access")}</h2>
             <div className="gov-card p-5">
               <div className="flex items-center gap-4 mb-5">
                 <div className="w-10 h-10 bg-gov-50 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -156,21 +156,21 @@ export default function Home() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gov-900">{t("traffic_personnel")}</p>
-                  <p className="text-xs text-gov-500">Signed in · Reports are auto-verified</p>
+                  <p className="text-xs text-gov-500">{t("personnel_active_desc")}</p>
                 </div>
                 <button onClick={signOut}
                   className="flex-shrink-0 flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-500 transition-colors px-2 py-1.5 rounded-lg hover:bg-red-50">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
                   </svg>
-                  Sign out
+                  {t("nav_signout")}
                 </button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <Link href="/citizen/report"
                   className="gov-card p-3 hover:border-gov-300 hover:shadow-sm transition-all group">
-                  <p className="text-sm font-medium text-gov-900">File a report</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Auto-verified incident →</p>
+                  <p className="text-sm font-medium text-gov-900">{t("nav_report")}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{t("traffic_personnel_desc").split("—")[0].trim()} →</p>
                 </Link>
                 <Link href="/citizen/heatmap"
                   className="gov-card p-3 hover:border-gov-300 hover:shadow-sm transition-all group">
@@ -188,7 +188,7 @@ export default function Home() {
         ) : userRole === "authority" ? (
           /* ── Authority: dashboard shortcut only ── */
           <>
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Quick access</h2>
+            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">{t("lbl_quick_access")}</h2>
             <Link href="/authority/dashboard"
               className="gov-card p-4 flex items-center gap-4 hover:border-gov-300 hover:shadow-sm transition-all">
               <div className="w-10 h-10 bg-gov-50 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -199,16 +199,16 @@ export default function Home() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gov-900">{t("role_authority")}</p>
-                <p className="text-xs text-gray-400">Signed in · Go to your control center</p>
+                <p className="text-xs text-gray-400">{t("authority_active_desc")}</p>
               </div>
-              <span className="gov-btn !py-1.5 !px-3 !text-xs flex-shrink-0">Dashboard →</span>
+              <span className="gov-btn !py-1.5 !px-3 !text-xs flex-shrink-0">{t("btn_dashboard")} →</span>
             </Link>
           </>
         ) : (
           /* ── Guest: all three role cards ── */
           <>
             <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">{t("role_choose")}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Link href="/citizen/heatmap"
                 className="gov-card p-4 flex items-center gap-4 hover:border-gov-300 hover:shadow-sm transition-all">
                 <div className="w-10 h-10 bg-gov-50 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -222,6 +222,20 @@ export default function Home() {
                   <p className="text-xs text-gray-400">{t("role_citizen_desc")}</p>
                 </div>
                 <span className="gov-btn !py-1.5 !px-3 !text-xs flex-shrink-0">{t("role_enter")}</span>
+              </Link>
+              <Link href="/traffic/login"
+                className="gov-card p-4 flex items-center gap-4 hover:border-gov-300 hover:shadow-sm transition-all">
+                <div className="w-10 h-10 bg-gov-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-gov-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                      d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gov-900">{t("traffic_personnel")}</p>
+                  <p className="text-xs text-gray-400">{t("traffic_personnel_desc")}</p>
+                </div>
+                <span className="gov-btn !py-1.5 !px-3 !text-xs flex-shrink-0">{t("role_signin")}</span>
               </Link>
               <Link href="/authority/login"
                 className="gov-card p-4 flex items-center gap-4 hover:border-gov-300 hover:shadow-sm transition-all">
@@ -238,10 +252,6 @@ export default function Home() {
                 <span className="gov-btn !py-1.5 !px-3 !text-xs flex-shrink-0">{t("role_signin")}</span>
               </Link>
             </div>
-            <p className="mt-3 text-xs text-gray-400 text-center">
-              {t("traffic_personnel")}?{" "}
-              <Link href="/traffic/login" className="text-gov-500 hover:underline">{t("role_signin")} →</Link>
-            </p>
           </>
         )}
       </section>
@@ -249,7 +259,7 @@ export default function Home() {
       {/* ── FAQ ─────────────────────────────────────────────────────── */}
       <section className="border-t border-gray-100">
         <div className="max-w-6xl mx-auto px-4 py-8">
-          <p className="text-xl font-bold text-gov-900 mb-6">Frequently asked questions</p>
+          <p className="text-xl font-bold text-gov-900 mb-6">{t("faq_title")}</p>
           <div className="space-y-4">
             {FAQ_CATEGORIES.map((cat, ci) => (
               <div key={ci}>
