@@ -77,3 +77,14 @@ async def cache_get(key: str) -> Optional[str]:
         return await r.get(key)
     except Exception:
         return None
+
+
+async def cache_delete(key: str) -> None:
+    """Delete a cached key. No-op if Redis is down."""
+    r = await get_redis()
+    if r is None:
+        return
+    try:
+        await r.delete(key)
+    except Exception:
+        pass
