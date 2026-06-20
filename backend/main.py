@@ -97,9 +97,8 @@ app = FastAPI(title="Namma Traffic API", version="1.0.0", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Always-allowed origins — production Vercel deployment + local dev.
-# FRONTEND_URL and EXTRA_ORIGINS env vars add on top of this list so
-# the Render env-var config cannot accidentally remove these entries.
+# Allow production Vercel URL, all Vercel preview URLs, and local dev.
+# allow_origin_regex covers namma-traffic-*.vercel.app preview deployments.
 _KNOWN_ORIGINS = [
     "https://namma-traffic-virid.vercel.app",
     "http://localhost:3000",
@@ -113,6 +112,7 @@ _all_origins = list(dict.fromkeys(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_all_origins,
+    allow_origin_regex=r"https://namma-traffic.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
