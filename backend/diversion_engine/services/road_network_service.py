@@ -96,7 +96,21 @@ class RoadNetworkService:
 
     @staticmethod
     def _extract_road_name(data: Dict) -> str:
-        name = data.get("name") or data.get("ref") or "Unnamed Road"
-        if isinstance(name, list):
-            name = name[0] if name else "Unnamed Road"
-        return str(name)
+        import math
+
+        def _valid(v) -> bool:
+            if v is None:
+                return False
+            if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                return False
+            s = str(v).strip()
+            return bool(s) and s.lower() not in ("nan", "none", "")
+
+        raw = data.get("name")
+        if isinstance(raw, list):
+            raw = next((x for x in raw if _valid(x)), None)
+        if not _valid(raw):
+            raw = data.get("ref")
+            if isinstance(raw, list):
+                raw = next((x for x in raw if _valid(x)), None)
+        return str(raw).strip() if _valid(raw) else "Unnamed Road"
