@@ -71,6 +71,7 @@ export const STRINGS = {
   stat_accuracy: "Route accuracy",
 
   // Landing — quick access / role section
+  lbl_citizen: "Citizen",
   lbl_quick_access: "Quick access",
   personnel_active_desc: "Signed in · Reports are auto-verified",
   authority_active_desc: "Signed in · Go to your control center",
@@ -237,6 +238,7 @@ export const STATIC_TRANSLATIONS: Partial<Record<Language, Translations>> = {
     stat_commuters: "दैनिक यात्री सेवित",
     stat_latency: "AI पूर्वानुमान विलंब",
     stat_accuracy: "मार्ग सटीकता",
+    lbl_citizen: "नागरिक",
     lbl_quick_access: "त्वरित पहुंच",
     personnel_active_desc: "साइन इन · रिपोर्ट स्वतः सत्यापित",
     authority_active_desc: "साइन इन · अपने कंट्रोल सेंटर पर जाएं",
@@ -372,6 +374,7 @@ export const STATIC_TRANSLATIONS: Partial<Record<Language, Translations>> = {
     stat_commuters: "ದೈನಂದಿನ ಪ್ರಯಾಣಿಕರು",
     stat_latency: "AI ಮುನ್ಸೂಚನೆ ವಿಳಂಬ",
     stat_accuracy: "ಮಾರ್ಗ ನಿಖರತೆ",
+    lbl_citizen: "ನಾಗರಿಕ",
     lbl_quick_access: "ತ್ವರಿತ ಪ್ರವೇಶ",
     personnel_active_desc: "ಸೈನ್ ಇನ್ · ವರದಿಗಳು ಸ್ವಯಂ-ಪ್ರಮಾಣಿತ",
     authority_active_desc: "ಸೈನ್ ಇನ್ · ನಿಮ್ಮ ಕಂಟ್ರೋಲ್ ಸೆಂಟರ್‌ಗೆ ಹೋಗಿ",
