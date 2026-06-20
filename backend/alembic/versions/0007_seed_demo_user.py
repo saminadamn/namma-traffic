@@ -17,8 +17,8 @@ import sqlalchemy as sa
 from alembic import op
 from passlib.context import CryptContext
 
-revision = "0007"
-down_revision = "0006"
+revision = "0012"
+down_revision = "0011"
 branch_labels = None
 depends_on = None
 

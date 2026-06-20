@@ -11,8 +11,8 @@ All ALTER TABLE statements use IF NOT EXISTS so this is safe to run regardless.
 import sqlalchemy as sa
 from alembic import op
 
-revision = "0008"
-down_revision = "0007"
+revision = "0013"
+down_revision = "0012"
 branch_labels = None
 depends_on = None
 

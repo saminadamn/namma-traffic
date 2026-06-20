@@ -1,7 +1,7 @@
 """seed default admin user
 
-Revision ID: 0006
-Revises: 0005
+Revision ID: 0011
+Revises: 0006
 Create Date: 2026-06-19
 
 Seeds one super_admin account so the authority dashboard can be accessed
@@ -17,8 +17,8 @@ import sqlalchemy as sa
 from alembic import op
 from passlib.context import CryptContext
 
-revision = "0006"
-down_revision = "0005"
+revision = "0011"
+down_revision = "0006"
 branch_labels = None
 depends_on = None
 
