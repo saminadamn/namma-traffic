@@ -66,9 +66,9 @@ export const STRINGS = {
 
   // Landing — live badge & stats
   hero_live_badge: "Live · Bengaluru Traffic Intelligence",
-  stat_commuters: "Daily commuters served",
-  stat_latency: "AI prediction latency",
-  stat_accuracy: "Route accuracy",
+  stat_commuters: "Incident Intelligence",
+  stat_latency: "API Latency",
+  stat_accuracy: "AUC Model Accuracy",
 
   // Landing — quick access / role section
   lbl_citizen: "Citizen",
@@ -247,9 +247,9 @@ export const STATIC_TRANSLATIONS: Partial<Record<Language, Translations>> = {
     role_enter: "प्रवेश करें",
     role_signin: "साइन इन करें",
     hero_live_badge: "लाइव · बेंगलुरु ट्रैफिक इंटेलिजेंस",
-    stat_commuters: "दैनिक यात्री सेवित",
-    stat_latency: "AI पूर्वानुमान विलंब",
-    stat_accuracy: "मार्ग सटीकता",
+    stat_commuters: "इंसिडेंट इंटेलिजेंस",
+    stat_latency: "API लेटेंसी",
+    stat_accuracy: "AUC मॉडल सटीकता",
     lbl_citizen: "नागरिक",
     lbl_quick_access: "त्वरित पहुंच",
     personnel_active_desc: "साइन इन · रिपोर्ट स्वतः सत्यापित",
@@ -395,9 +395,9 @@ export const STATIC_TRANSLATIONS: Partial<Record<Language, Translations>> = {
     role_enter: "ಪ್ರವೇಶಿಸಿ",
     role_signin: "ಸೈನ್ ಇನ್ ಮಾಡಿ",
     hero_live_badge: "ಲೈವ್ · ಬೆಂಗಳೂರು ಟ್ರಾಫಿಕ್ ಇಂಟೆಲಿಜೆನ್ಸ್",
-    stat_commuters: "ದೈನಂದಿನ ಪ್ರಯಾಣಿಕರು",
-    stat_latency: "AI ಮುನ್ಸೂಚನೆ ವಿಳಂಬ",
-    stat_accuracy: "ಮಾರ್ಗ ನಿಖರತೆ",
+    stat_commuters: "ಘಟನೆ ಇಂಟೆಲಿಜೆನ್ಸ್",
+    stat_latency: "API ಲೇಟೆನ್ಸಿ",
+    stat_accuracy: "AUC ಮಾದರಿ ನಿಖರತೆ",
     lbl_citizen: "ನಾಗರಿಕ",
     lbl_quick_access: "ತ್ವರಿತ ಪ್ರವೇಶ",
     personnel_active_desc: "ಸೈನ್ ಇನ್ · ವರದಿಗಳು ಸ್ವಯಂ-ಪ್ರಮಾಣಿತ",

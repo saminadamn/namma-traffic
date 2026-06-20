@@ -70,9 +70,9 @@ export default function Home() {
         {/* Stats strip */}
         <div className="max-w-6xl mx-auto px-4 pb-5 flex flex-wrap gap-4 sm:gap-8">
           {[
-            { val: "2.4M+", label: t("stat_commuters") },
-            { val: "< 3s",  label: t("stat_latency") },
-            { val: "99.2%", label: t("stat_accuracy") },
+            { val: "< 120ms", label: t("stat_latency") },
+            { val: "0.784",   label: t("stat_accuracy") },
+            { val: "Real-Time", label: t("stat_commuters") },
           ].map((s, i, arr) => (
             <div key={s.label} className="flex items-center gap-4">
               <div>
