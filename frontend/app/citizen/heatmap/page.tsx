@@ -1,7 +1,7 @@
 "use client"
 import dynamic from "next/dynamic"
-import { useEffect, useState } from "react"
-import { getHotspots, getWeather, type Hotspot, type Weather } from "@/lib/api"
+import { useCallback, useEffect, useState } from "react"
+import { getWeather, type Hotspot, type Weather } from "@/lib/api"
 import { useLanguage } from "@/contexts/LanguageContext"
 
 const TrafficMap = dynamic(() => import("@/components/maps/TrafficMap"), {
@@ -12,17 +12,27 @@ const TrafficMap = dynamic(() => import("@/components/maps/TrafficMap"), {
 export default function HeatmapPage() {
   const { t } = useLanguage()
   const [hotspots, setHotspots] = useState<Hotspot[]>([])
-  const [weather, setWeather]   = useState<Weather | null>(null)
+  const [weather,  setWeather]  = useState<Weather | null>(null)
+  const [newFlash, setNewFlash] = useState(false)
 
   useEffect(() => {
-    getHotspots().then(setHotspots).catch(() => {})
     getWeather().then(setWeather).catch(() => {})
+  }, [])
+
+  const handleHotspotsChange = useCallback((spots: Hotspot[]) => {
+    setHotspots(spots)
+    setNewFlash(true)
+    setTimeout(() => setNewFlash(false), 1000)
   }, [])
 
   return (
     <div className="max-w-4xl mx-auto px-3 sm:px-5 py-5">
-      <h1 className="text-xl font-semibold text-gov-900">{t("hmap_title")}</h1>
-      <p className="text-sm text-gray-500 mt-1 mb-4">{t("hmap_desc")}</p>
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h1 className="text-xl font-semibold text-gov-900">{t("hmap_title")}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{t("hmap_desc")}</p>
+        </div>
+      </div>
 
       {weather?.monsoon_alert && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 text-sm text-amber-800 flex gap-2 items-start">
@@ -37,18 +47,30 @@ export default function HeatmapPage() {
       )}
 
       <div className="mb-4">
-        <TrafficMap />
+        <TrafficMap onHotspotsChange={handleHotspotsChange} />
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-        {hotspots.slice(0, 4).map(h => (
-          <div key={h.junction} className="gov-card p-3 sm:p-4">
-            <p className="text-xs font-medium text-gov-900 truncate">{h.junction}</p>
-            <p className="text-xl font-semibold text-red-600 mt-1">{h.count}</p>
-            <p className="text-[11px] text-gray-400 capitalize">{h.dominant_cause.replace(/_/g, " ")} {t("hmap_incidents")}</p>
+      {/* Live hotspot cards */}
+      {hotspots.length > 0 && (
+        <div>
+          <p className={`text-xs font-medium mb-2 transition-colors ${
+            newFlash ? "text-emerald-600" : "text-gray-500"
+          }`}>
+            {newFlash ? "↑ Hotspots updated" : "Top congestion hotspots"}
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {hotspots.slice(0, 4).map(h => (
+              <div key={h.junction} className={`gov-card p-3 sm:p-4 transition-all duration-500 ${
+                newFlash ? "ring-1 ring-emerald-200 bg-emerald-50/30" : ""
+              }`}>
+                <p className="text-xs font-medium text-gov-900 truncate">{h.junction}</p>
+                <p className="text-xl font-semibold text-red-600 mt-1">{h.count}</p>
+                <p className="text-[11px] text-gray-400 capitalize">{h.dominant_cause.replace(/_/g, " ")} {t("hmap_incidents")}</p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
