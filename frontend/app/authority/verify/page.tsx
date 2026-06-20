@@ -48,7 +48,7 @@ export default function ReportsQueuePage() {
     try {
       const [p, v] = await Promise.all([
         getPendingReports(),
-        getReports("status=approved"),
+        getReports("approved"),
       ])
       setPending(p)
       setVerified(v)

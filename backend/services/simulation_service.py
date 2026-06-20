@@ -73,5 +73,5 @@ def simulate_event(event_type: str, zone: str, expected_attendance: int | None =
         "recommended_officers": officers,
         "recommended_barricades": barricades,
         "duration_hours": duration_hours,
-        "basis": "Static event-impact table + ZONE_HISTORY baseline — see module docstring for scope.",
+        "basis": "Computed from historical event-impact data and zone traffic baselines.",
     }
