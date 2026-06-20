@@ -24,7 +24,7 @@ export default function PublicHeader() {
     localStorage.removeItem("namma_refresh")
     localStorage.removeItem("namma_role")
     setIsPersonnel(false)
-    router.push("/traffic/login")
+    router.push("/")
   }
 
   const logoutCitizen = () => {
