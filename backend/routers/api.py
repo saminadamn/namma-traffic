@@ -113,6 +113,45 @@ def corridor_risk(db=Depends(get_db)):
     """Active incident severity aggregated by corridor — powers dashboard risk bars."""
     return incident_service.corridor_risk(db)
 
+@incidents_router.get("/allocation")
+def resource_allocation(db=Depends(get_db)):
+    """ML-driven officer and barricade allocation per active incident.
+    Uses closure_probability (CatBoost) + event_cause minimums from the
+    rules engine — same formula as rules_engine.py but applied to stored incidents."""
+    from db_models.incident import Incident
+    from services.rules_engine import MIN_OFFICERS
+
+    incidents = (
+        db.query(Incident)
+        .filter(Incident.status == "active")
+        .order_by(Incident.created_at.desc())
+        .all()
+    )
+
+    result = []
+    for inc in incidents:
+        cp   = inc.closure_probability or 0.0
+        ml_base = max(2, int(cp * 20))
+        if inc.priority == "High":
+            ml_base += 4
+        officers   = max(MIN_OFFICERS.get(inc.event_cause or "", 2), ml_base)
+        barricades = max(1, int(cp * 15))
+
+        result.append({
+            "incident_id":         str(inc.id),
+            "address":             inc.address,
+            "zone":                inc.zone,
+            "event_cause":         inc.event_cause,
+            "priority":            inc.priority,
+            "closure_probability": round(cp, 3),
+            "officers_needed":     officers,
+            "barricades_needed":   barricades,
+            "diversion_required":  cp > 0.45 or inc.requires_road_closure,
+        })
+
+    result.sort(key=lambda x: x["officers_needed"], reverse=True)
+    return result
+
 
 @incidents_router.patch("/{incident_id}/complete")
 def complete_incident(incident_id: str, db=Depends(get_db)):

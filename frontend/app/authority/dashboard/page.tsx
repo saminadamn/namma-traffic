@@ -3,8 +3,8 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import {
   getIncidentStats, getWeather, getPriorityRanking, getPendingReports,
-  getCommandCenter, generateDemoData,
-  type Incident, type IncidentStats, type Weather, type CommandCenterSummary,
+  getCommandCenter, generateDemoData, getAllocation,
+  type Incident, type IncidentStats, type Weather, type CommandCenterSummary, type AllocationItem,
 } from "@/lib/api"
 
 const severityBadge = (s?: string | null) =>
@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [pendingCount, setPendingCount] = useState<number | null>(null)
   const [summary,      setSummary]      = useState<CommandCenterSummary | null>(null)
   const [lastRefresh,  setLastRefresh]  = useState<Date | null>(null)
+  const [allocation,   setAllocation]   = useState<AllocationItem[]>([])
   const [demoLoading,  setDemoLoading]  = useState(false)
   const [demoMsg,      setDemoMsg]      = useState("")
   const [demoOk,       setDemoOk]       = useState(false)
@@ -34,6 +35,7 @@ export default function Dashboard() {
     getPriorityRanking(5).then(setTopPriority).catch(() => {})
     getPendingReports().then(r => setPendingCount(r.length)).catch(() => {})
     getCommandCenter().then(s => { setSummary(s); setLastRefresh(new Date()) }).catch(() => {})
+    getAllocation().then(setAllocation).catch(() => {})
   }
 
   useEffect(() => {
@@ -167,6 +169,47 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* ML Resource Allocation */}
+      {allocation.length > 0 && (
+        <div className="gov-card p-4 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-medium text-gov-900">ML resource allocation</p>
+            <span className="text-[10px] text-gray-400">CatBoost closure probability → officers · barricades</span>
+          </div>
+          <div className="grid grid-cols-4 text-[10px] text-gray-400 font-medium px-1 mb-1.5">
+            <span className="col-span-2">Incident</span>
+            <span className="text-center">Officers</span>
+            <span className="text-center">Barricades</span>
+          </div>
+          <div className="space-y-1.5">
+            {allocation.slice(0, 6).map(a => (
+              <div key={a.incident_id} className="grid grid-cols-4 items-center py-1.5 px-1 rounded-lg hover:bg-gray-50">
+                <div className="col-span-2 min-w-0 pr-2">
+                  <p className="text-xs font-medium text-gray-800 truncate">{a.address}</p>
+                  <p className="text-[10px] text-gray-400">
+                    {a.event_cause?.replace(/_/g, " ")} · {Math.round(a.closure_probability * 100)}% closure risk
+                    {a.diversion_required && <span className="ml-1 text-red-500">· diversion</span>}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-gov-700 bg-gov-50 px-2 py-0.5 rounded-full">
+                    👮 {a.officers_needed}
+                  </span>
+                </div>
+                <div className="text-center">
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                    🚧 {a.barricades_needed}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-gray-400 mt-3 leading-relaxed">
+            Allocation computed from ML closure probability · priority · event cause minimums
+          </p>
+        </div>
+      )}
 
       {/* Demo data generator */}
       <div className="gov-card p-4 max-w-sm">
