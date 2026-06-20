@@ -101,6 +101,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # allow_origin_regex covers namma-traffic-*.vercel.app preview deployments.
 _KNOWN_ORIGINS = [
     "https://namma-traffic-virid.vercel.app",
+    "https://namma-traffic.onrender.com",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
