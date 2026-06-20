@@ -89,8 +89,7 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
             <p className="text-[10px] text-gray-400 truncate">{user?.roles[0]?.replace(/_/g, " ") || "officer"}</p>
           </div>
         </div>
-        <div className="flex items-center justify-between">
-          <Link href="/" className="text-[10px] text-gray-400 hover:text-gov-500">{t("nav_public_site")}</Link>
+        <div className="flex items-center justify-end">
           <button onClick={logout} className="text-[10px] text-gray-400 hover:text-red-500 transition-colors">
             {t("nav_signout")}
           </button>
