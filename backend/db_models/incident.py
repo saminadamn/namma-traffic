@@ -110,6 +110,10 @@ class CitizenReport(Base):
     photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
 
+    # Collected from citizen at submission time — used for accurate ML scoring.
+    veh_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    incident_type: Mapped[str | None] = mapped_column(String(20), nullable=True, default="unplanned")
+
     # ML scoring — populated by the geocode_report ARQ worker after submission.
     # NULL until the worker runs; authority queue sorts by risk_score DESC NULLS LAST.
     closure_probability: Mapped[float | None] = mapped_column(Float, nullable=True)

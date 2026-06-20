@@ -130,12 +130,15 @@ def list_reports(status: str = None, db=Depends(get_db)):
 async def create_report(
     request: Request,
     category: str = Form(...), description: str = Form(...), address: str = Form(...),
-    latitude: float = Form(...), longitude: float = Form(...), photo: UploadFile = File(None),
+    latitude: float = Form(...), longitude: float = Form(...),
+    veh_type: str = Form(None), incident_type: str = Form("unplanned"),
+    photo: UploadFile = File(None),
     db=Depends(get_db),
 ):
     photo_url = await upload_service.upload_photo(photo)
     report_dict = incident_service.create_report(
-        db, category, description, address, latitude, longitude, photo_url=photo_url,
+        db, category, description, address, latitude, longitude,
+        photo_url=photo_url, veh_type=veh_type, incident_type=incident_type,
     )
     # Enqueue reverse-geocoding in the background (no-op when Redis absent)
     from services.arq_service import enqueue

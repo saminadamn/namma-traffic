@@ -90,6 +90,8 @@ def _report_to_dict(r: CitizenReport) -> dict:
         "longitude": r.longitude,
         "photo_url": r.photo_url,
         "status": r.status,
+        "veh_type": r.veh_type,
+        "incident_type": r.incident_type or "unplanned",
         "created_at": r.created_at.isoformat() if r.created_at else None,
         # ML scores — None until the background worker runs
         "closure_probability": r.closure_probability,
@@ -347,8 +349,11 @@ def _generate_tracking_id() -> str:
     return "RPT-2026-" + "".join(random.choices(string.digits, k=4))
 
 
-def create_report(db: Session, category: str, description: str, address: str,
-                   latitude: float, longitude: float, photo_url: str | None, reporter_id=None) -> dict:
+def create_report(
+    db: Session, category: str, description: str, address: str,
+    latitude: float, longitude: float, photo_url: str | None,
+    reporter_id=None, veh_type: str | None = None, incident_type: str = "unplanned",
+) -> dict:
     report = CitizenReport(
         reporter_id=reporter_id,
         tracking_id=_generate_tracking_id(),
@@ -360,6 +365,8 @@ def create_report(db: Session, category: str, description: str, address: str,
         longitude=longitude,
         photo_url=photo_url,
         status="pending",
+        veh_type=veh_type or None,
+        incident_type=incident_type or "unplanned",
     )
     db.add(report)
     db.commit()

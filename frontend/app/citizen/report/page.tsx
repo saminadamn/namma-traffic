@@ -6,59 +6,87 @@ import { useLanguage } from "@/contexts/LanguageContext"
 
 const LocationPicker = dynamic(() => import("@/components/maps/LocationPicker"), { ssr: false })
 
-const CATEGORY_ICONS: Record<string, React.ReactNode> = {
-  Accident: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
-    </svg>
-  ),
-  Waterlogging: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c-4.97 5.25-7 8.5-7 11a7 7 0 0014 0c0-2.5-2.03-5.75-7-11z" />
-    </svg>
-  ),
-  "Tree fall": (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 2L7 9h3.5l-4 6H11v5h2v-5h4.5l-4-6H17L12 2z" />
-    </svg>
-  ),
-  Breakdown: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085" />
-    </svg>
-  ),
-  "Signal failure": (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9.348 14.651a3.75 3.75 0 010-5.303m5.304 0a3.75 3.75 0 010 5.303m-7.425 2.122a6.75 6.75 0 010-9.546m9.546 0a6.75 6.75 0 010 9.546M5.106 18.894c-3.808-3.808-3.808-9.98 0-13.789m13.788 0c3.808 3.808 3.808 9.981 0 13.789M12 12h.008v.008H12V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-    </svg>
-  ),
-  Obstruction: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-    </svg>
-  ),
-}
-
-const CATEGORIES = [
-  { label: "Accident" },
-  { label: "Waterlogging" },
-  { label: "Tree fall" },
-  { label: "Breakdown" },
-  { label: "Signal failure" },
-  { label: "Obstruction" },
+// ── Category → ML event_cause mapping ────────────────────────────────────────
+// Values must match catboost_service CAUSES exactly so the ML worker scores correctly
+const CATEGORIES: { label: string; cause: string; icon: React.ReactNode }[] = [
+  {
+    label: "Accident", cause: "accident",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" /></svg>,
+  },
+  {
+    label: "Vehicle breakdown", cause: "vehicle_breakdown",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085" /></svg>,
+  },
+  {
+    label: "Pothole", cause: "pot_holes",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>,
+  },
+  {
+    label: "Waterlogging", cause: "water_logging",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3c-4.97 5.25-7 8.5-7 11a7 7 0 0014 0c0-2.5-2.03-5.75-7-11z" /></svg>,
+  },
+  {
+    label: "Tree fall", cause: "tree_fall",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 2L7 9h3.5l-4 6H11v5h2v-5h4.5l-4-6H17L12 2z" /></svg>,
+  },
+  {
+    label: "Obstruction", cause: "debris",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>,
+  },
+  {
+    label: "Construction", cause: "construction",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63" /></svg>,
+  },
+  {
+    label: "Congestion", cause: "congestion",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" /></svg>,
+  },
+  {
+    label: "Public event", cause: "public_event",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" /></svg>,
+  },
+  {
+    label: "Signal failure", cause: "signal_failure",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9.348 14.651a3.75 3.75 0 010-5.303m5.304 0a3.75 3.75 0 010 5.303m-7.425 2.122a6.75 6.75 0 010-9.546m9.546 0a6.75 6.75 0 010 9.546M5.106 18.894c-3.808-3.808-3.808-9.98 0-13.789m13.788 0c3.808 3.808 3.808 9.981 0 13.789M12 12h.008v.008H12V12z" /></svg>,
+  },
+  {
+    label: "Others", cause: "others",
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  },
 ]
+
+const VEH_TYPES = [
+  { label: "N/A",       value: "" },
+  { label: "Car",       value: "private_car" },
+  { label: "Auto",      value: "auto" },
+  { label: "Taxi",      value: "taxi" },
+  { label: "Truck",     value: "truck" },
+  { label: "Heavy",     value: "heavy_vehicle" },
+  { label: "BMTC",      value: "bmtc_bus" },
+  { label: "KSRTC",     value: "ksrtc_bus" },
+  { label: "Pvt bus",   value: "private_bus" },
+]
+
+const Divider = ({ label }: { label: string }) => (
+  <div className="flex items-center gap-2 py-1">
+    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{label}</span>
+    <div className="flex-1 h-px bg-gray-100" />
+  </div>
+)
 
 export default function ReportPage() {
   const { t } = useLanguage()
-  const [category,    setCategory]  = useState("Accident")
-  const [description, setDesc]      = useState("")
-  const [address,     setAddress]   = useState("")
-  const [lat,         setLat]       = useState("12.9716")
-  const [lon,         setLon]       = useState("77.5946")
-  const [loading,     setLoading]   = useState(false)
-  const [trackingId,  setTracking]  = useState<string | null>(null)
-  const [submitError, setSubmitError] = useState<string | null>(null)
-  const [recent,      setRecent]    = useState<Report[]>([])
+  const [category,     setCategory]     = useState(CATEGORIES[0].cause)
+  const [incidentType, setIncidentType] = useState<"unplanned" | "planned">("unplanned")
+  const [vehType,      setVehType]      = useState("")
+  const [description,  setDesc]         = useState("")
+  const [address,      setAddress]      = useState("")
+  const [lat,          setLat]          = useState("12.9716")
+  const [lon,          setLon]          = useState("77.5946")
+  const [loading,      setLoading]      = useState(false)
+  const [trackingId,   setTracking]     = useState<string | null>(null)
+  const [submitError,  setSubmitError]  = useState<string | null>(null)
+  const [recent,       setRecent]       = useState<Report[]>([])
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -69,8 +97,7 @@ export default function ReportPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const url = URL.createObjectURL(file)
-    setPhotoPreview(url)
+    setPhotoPreview(URL.createObjectURL(file))
   }
 
   const removePhoto = () => {
@@ -80,11 +107,12 @@ export default function ReportPage() {
 
   const submit = async () => {
     if (!description || !address) return
-    setLoading(true)
-    setSubmitError(null)
+    setLoading(true); setSubmitError(null)
     try {
       const fd = new FormData()
       fd.append("category", category)
+      fd.append("incident_type", incidentType)
+      fd.append("veh_type", vehType)
       fd.append("description", description)
       fd.append("address", address)
       fd.append("latitude", lat)
@@ -101,24 +129,38 @@ export default function ReportPage() {
     }
   }
 
-  const badgeClass = (s: string) =>
-    s === "pending" ? "badge-pending" : s === "approved" ? "badge-approved" : "badge-low"
+  const statusLabel = (s: string) =>
+    s === "pending"  ? "Awaiting verification" :
+    s === "approved" ? "Verified" : s
+
+  const statusClass = (s: string) =>
+    s === "pending"  ? "bg-amber-50 text-amber-700 border border-amber-200" :
+    s === "approved" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                       "bg-gray-100 text-gray-500"
 
   if (trackingId) {
     return (
-      <div className="max-w-md mx-auto">
-        <div className="gov-card p-8 text-center border-emerald-200 bg-emerald-50">
-          <div className="w-12 h-12 rounded-full bg-emerald-100 border border-emerald-200 flex items-center justify-center mx-auto mb-4">
+      <div className="max-w-md mx-auto p-4">
+        <div className="gov-card p-8 text-center">
+          <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto mb-4">
             <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
           </div>
-          <p className="text-sm font-medium text-emerald-800">{t("rpt_success_title")}</p>
-          <p className="text-2xl font-semibold text-emerald-700 mt-2 tracking-widest">{trackingId}</p>
-          <p className="text-xs text-emerald-600 mt-1">{t("rpt_tracking_label")}</p>
+          <p className="text-sm font-semibold text-gray-900">{t("rpt_success_title")}</p>
+          <p className="text-2xl font-bold text-gov-600 mt-2 tracking-widest">{trackingId}</p>
+          <p className="text-xs text-gray-500 mt-1">{t("rpt_tracking_label")}</p>
+
+          <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-left">
+            <p className="text-xs font-medium text-amber-800 mb-1">Status: Awaiting verification</p>
+            <p className="text-[11px] text-amber-700 leading-relaxed">
+              A traffic officer will review your report. Once verified, it becomes a live incident on the map and affects route recommendations for all users.
+            </p>
+          </div>
+
           <button
             onClick={() => { setTracking(null); setDesc(""); setAddress(""); setSubmitError(null) }}
-            className="gov-btn-outline mt-6"
+            className="gov-btn-outline mt-5"
           >
             {t("rpt_submit")}
           </button>
@@ -127,30 +169,58 @@ export default function ReportPage() {
     )
   }
 
+  const selectedCat = CATEGORIES.find(c => c.cause === category) || CATEGORIES[0]
+
   return (
-    <div>
-      <h1 className="text-xl font-medium text-gov-900">{t("rpt_title")}</h1>
-      <p className="text-sm text-gray-500 mt-1 mb-5">{t("rpt_desc")}</p>
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+      <div className="mb-5">
+        <h1 className="text-base font-semibold text-gov-900">{t("rpt_title")}</h1>
+        <p className="text-xs text-gray-400 mt-0.5">{t("rpt_desc")}</p>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {/* ── Main form ── */}
-        <div className="md:col-span-2 gov-card p-5 space-y-5">
+      <div className="flex flex-col lg:grid lg:grid-cols-3 gap-4">
 
-          {/* Category */}
-          <div>
-            <p className="gov-label mb-2">{t("rpt_category")}</p>
-            <div className="grid grid-cols-3 gap-2">
+        {/* ── Main form ─────────────────────────────────────────────────────── */}
+        <div className="lg:col-span-2 gov-card p-4 sm:p-5 space-y-4">
+
+          {/* Incident type toggle */}
+          <div className="space-y-3">
+            <Divider label="Incident type" />
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+              {(["unplanned", "planned"] as const).map(t => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setIncidentType(t)}
+                  className={`flex-1 text-sm py-2.5 transition-colors font-medium ${
+                    incidentType === t ? "bg-gov-500 text-white" : "bg-white text-gray-500 hover:bg-gray-50"
+                  }`}
+                >
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Category grid */}
+          <div className="space-y-3">
+            <Divider label="Incident category" />
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {CATEGORIES.map(c => (
-                <button key={c.label} onClick={() => setCategory(c.label)}
+                <button
+                  key={c.cause}
+                  type="button"
+                  onClick={() => setCategory(c.cause)}
                   className={`py-2.5 px-2 rounded-lg border text-center transition-colors ${
-                    category === c.label
+                    category === c.cause
                       ? "border-gov-500 bg-gov-50"
                       : "border-gray-200 hover:bg-gray-50"
-                  }`}>
-                  <div className={`flex justify-center mb-1 ${category === c.label ? "text-gov-500" : "text-gray-400"}`}>
-                    {CATEGORY_ICONS[c.label]}
+                  }`}
+                >
+                  <div className={`flex justify-center mb-1 ${category === c.cause ? "text-gov-500" : "text-gray-400"}`}>
+                    {c.icon}
                   </div>
-                  <p className={`text-[11px] leading-tight ${category === c.label ? "text-gov-600 font-medium" : "text-gray-500"}`}>
+                  <p className={`text-[10px] leading-tight ${category === c.cause ? "text-gov-600 font-medium" : "text-gray-500"}`}>
                     {c.label}
                   </p>
                 </button>
@@ -159,31 +229,66 @@ export default function ReportPage() {
           </div>
 
           {/* Location */}
-          <div>
-            <label className="gov-label">{t("rpt_address")}</label>
-            <LocationPicker lat={lat} lon={lon} onPick={(la, lo, addr) => {
-              setLat(la); setLon(lo); if (addr) setAddress(addr)
-            }} />
-            <input className="gov-input mt-2" value={address}
-              onChange={e => setAddress(e.target.value)}
-              placeholder="Junction name or landmark…" />
-            <p className="text-[10px] text-gray-400 mt-1">Coords: {lat}, {lon}</p>
+          <div className="space-y-3">
+            <Divider label="Location" />
+            <LocationPicker
+              lat={lat}
+              lon={lon}
+              onPick={(la, lo, addr) => {
+                setLat(la); setLon(lo)
+                if (addr) setAddress(addr)
+              }}
+            />
+            <div>
+              <label className="gov-label">{t("rpt_address")}</label>
+              <input
+                className="gov-input"
+                value={address}
+                onChange={e => setAddress(e.target.value)}
+                placeholder="Junction name or landmark…"
+              />
+              <p className="text-[10px] text-gray-400 mt-1">Coords: {lat}, {lon}</p>
+            </div>
+          </div>
+
+          {/* Vehicle type */}
+          <div className="space-y-3">
+            <Divider label="Vehicle involved (optional — improves ML accuracy)" />
+            <div className="flex flex-wrap gap-1.5">
+              {VEH_TYPES.map(({ label, value }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setVehType(value)}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                    vehType === value
+                      ? "bg-gov-500 border-gov-500 text-white font-medium"
+                      : "border-gray-200 text-gray-600 hover:border-gov-400 hover:text-gov-500 bg-white"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Description */}
           <div>
             <label className="gov-label">{t("rpt_description")}</label>
-            <textarea className="gov-input h-20 resize-none" value={description}
+            <textarea
+              className="gov-input h-20 resize-none"
+              value={description}
               onChange={e => setDesc(e.target.value)}
-              placeholder={t("rpt_desc_placeholder")} />
+              placeholder={t("rpt_desc_placeholder")}
+            />
           </div>
 
-          {/* Photo upload with preview */}
+          {/* Photo */}
           <div>
             <label className="gov-label">{t("rpt_photo")}</label>
             {photoPreview ? (
               <div className="relative rounded-xl overflow-hidden border border-gray-200">
-                <img src={photoPreview} alt="Preview" className="w-full max-h-56 object-cover" />
+                <img src={photoPreview} alt="Preview" className="w-full max-h-48 object-cover" />
                 <button
                   onClick={removePhoto}
                   className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
@@ -192,11 +297,6 @@ export default function ReportPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent px-3 py-2">
-                  <p className="text-xs text-white font-medium">
-                    {fileRef.current?.files?.[0]?.name ?? "Photo selected"}
-                  </p>
-                </div>
               </div>
             ) : (
               <button
@@ -211,21 +311,14 @@ export default function ReportPage() {
                   </svg>
                 </div>
                 <p className="text-sm text-gray-500">Add a photo</p>
-                <p className="text-xs text-gray-400 mt-0.5">JPG, PNG — optional but helps</p>
+                <p className="text-xs text-gray-400 mt-0.5">JPG, PNG — optional but helps verification</p>
               </button>
             )}
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={handleFileChange}
-            />
+            <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
           </div>
 
           {submitError && (
-            <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-xs text-red-700">
               {submitError}
             </div>
           )}
@@ -233,7 +326,7 @@ export default function ReportPage() {
           <button
             onClick={submit}
             disabled={loading || !description || !address}
-            className="gov-btn w-full py-3.5 text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+            className="gov-btn w-full py-3 text-sm disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading
               ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />{t("rpt_submitting")}</>
@@ -242,40 +335,53 @@ export default function ReportPage() {
           </button>
         </div>
 
-        {/* ── Sidebar ── */}
+        {/* ── Sidebar ──────────────────────────────────────────────────────── */}
         <div className="space-y-4">
-          <div className="gov-card p-4">
-            <p className="text-xs font-medium text-gov-900 mb-3">My recent reports</p>
-            {recent.length === 0
-              ? <p className="text-xs text-gray-400">No reports yet</p>
-              : recent.map(r => (
-                <div key={r.id} className="bg-[#FAFAF8] rounded-lg p-2.5 mb-2">
-                  <div className="flex justify-between items-center gap-2">
-                    <span className="text-[11px] font-medium text-gray-800 truncate">{r.category} — {r.address}</span>
-                    <span className={badgeClass(r.status)}>{r.status}</span>
-                  </div>
-                  <p className="text-[10px] text-gray-400 mt-0.5">{r.tracking_id}</p>
-                </div>
-              ))
-            }
-          </div>
 
-          <div className="bg-gov-50 rounded-xl p-4">
-            <p className="text-xs font-medium text-gov-600 mb-2">How it works</p>
-            <ol className="text-[11px] text-gov-500 space-y-1.5">
-              {["Submit with photo", "Officer reviews", "Appears on live map", "You're notified on resolution"]
-                .map((s, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="w-4 h-4 rounded-full bg-gov-200 text-gov-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
-                      {i + 1}
-                    </span>
-                    {s}
-                  </li>
-                ))
-              }
+          {/* Verification flow info */}
+          <div className="gov-card p-4">
+            <p className="text-xs font-semibold text-gov-900 mb-3">Verification flow</p>
+            <ol className="space-y-2.5">
+              {[
+                { step: "Submit your report", sub: "Anonymous · no login required" },
+                { step: "ML risk scoring",    sub: "Automatic · closure probability calculated" },
+                { step: "Officer reviews",    sub: "Highest-risk reports triaged first" },
+                { step: "Goes live on map",   sub: "Affects route safety for all users" },
+              ].map((item, i) => (
+                <li key={i} className="flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-gov-100 text-gov-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <p className="text-[11px] font-medium text-gray-800">{item.step}</p>
+                    <p className="text-[10px] text-gray-400">{item.sub}</p>
+                  </div>
+                </li>
+              ))}
             </ol>
           </div>
+
+          {/* My recent reports */}
+          <div className="gov-card p-4">
+            <p className="text-xs font-semibold text-gov-900 mb-3">Recent reports</p>
+            {recent.length === 0 ? (
+              <p className="text-xs text-gray-400">No reports yet</p>
+            ) : recent.map(r => (
+              <div key={r.id} className="rounded-lg p-2.5 mb-2 bg-gray-50">
+                <div className="flex justify-between items-start gap-2">
+                  <span className="text-[11px] font-medium text-gray-800 truncate flex-1">
+                    {r.category.replace(/_/g, " ")} — {r.address}
+                  </span>
+                  <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ${statusClass(r.status)}`}>
+                    {statusLabel(r.status)}
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-0.5">{r.tracking_id}</p>
+              </div>
+            ))}
+          </div>
         </div>
+
       </div>
     </div>
   )

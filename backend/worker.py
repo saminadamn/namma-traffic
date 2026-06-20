@@ -112,12 +112,12 @@ async def geocode_report(ctx, report_id: str) -> None:
             event_cause = (report.category or "others").lower().replace(" ", "_")
 
             ml = catboost_service.predict(
-                event_type=event_cause,
+                event_type=getattr(report, "incident_type", None) or "unplanned",
                 latitude=report.latitude,
                 longitude=report.longitude,
                 event_cause=event_cause,
                 authenticated=report.reporter_id is not None,
-                veh_type=None,
+                veh_type=getattr(report, "veh_type", None),
                 start_datetime=now.isoformat(),
                 description=report.description or "",
             )
