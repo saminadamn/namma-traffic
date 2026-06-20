@@ -128,6 +128,8 @@ class CitizenReport(Base):
     )
     resolved_incident: Mapped["Incident"] = relationship(back_populates="reports")
 
+    authenticated: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
     verified_by_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

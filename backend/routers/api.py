@@ -14,6 +14,7 @@ limiter = Limiter(key_func=get_remote_address)
 from schemas.schemas import EventInput, PredictionOutput, IncidentCreate, VerifyAction
 from services import store, incident_service, upload_service, catboost_service, rules_engine
 from core.database import get_db
+from core.rbac import get_optional_user
 from routers.websocket import manager
 from datetime import datetime
 import uuid, httpx, logging
@@ -113,6 +114,15 @@ def corridor_risk(db=Depends(get_db)):
     return incident_service.corridor_risk(db)
 
 
+@incidents_router.patch("/{incident_id}/complete")
+def complete_incident(incident_id: str, db=Depends(get_db)):
+    """Authority ends an event — status → 'completed', releases all held resources."""
+    from fastapi import HTTPException
+    result = incident_service.complete_incident(db, incident_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return result
+
 @incidents_router.patch("/{incident_id}/resolve")
 def resolve_incident(incident_id: str, db=Depends(get_db)):
     """Mark an incident as resolved — releases its officers and barricades
@@ -146,15 +156,29 @@ async def create_report(
     veh_type: str = Form(None), incident_type: str = Form("unplanned"),
     photo: UploadFile = File(None),
     db=Depends(get_db),
+    current_user=Depends(get_optional_user),
 ):
+    is_personnel = (
+        current_user is not None and
+        "traffic_personnel" in current_user.role_names()
+    )
     photo_url = await upload_service.upload_photo(photo)
     report_dict = incident_service.create_report(
         db, category, description, address, latitude, longitude,
         photo_url=photo_url, veh_type=veh_type, incident_type=incident_type,
+        reporter_id=current_user.id if current_user else None,
+        authenticated=is_personnel,
     )
-    # Enqueue reverse-geocoding in the background (no-op when Redis absent)
-    from services.arq_service import enqueue
-    await enqueue("geocode_report", report_dict["id"])
+    if is_personnel:
+        # Traffic personnel reports skip manual verification — auto-approve and create incident
+        report_dict, incident_dict = incident_service.verify_report(
+            db, report_dict["id"], "approve", verifier_id=current_user.id
+        )
+        if incident_dict:
+            await manager.broadcast("incident_created", incident_dict)
+    else:
+        from services.arq_service import enqueue
+        await enqueue("geocode_report", report_dict["id"])
     return {"tracking_id": report_dict["tracking_id"], "status": report_dict["status"]}
 
 @reports_router.patch("/verify")
@@ -176,7 +200,7 @@ def heatmap(cause: str = None, db=Depends(get_db)):
     # return an empty heatmap with no error anywhere. Both had to move
     # together; flagging it here so the coupling is documented, not just
     # fixed.
-    rows = incident_service.list_incidents(db, limit=10000)
+    rows = incident_service.list_incidents(db, status="active", limit=10000)
     if cause and cause != "All":
         rows = [r for r in rows if r["event_cause"] == cause]
     points = []

@@ -27,13 +27,19 @@ export default function Dashboard() {
   const [corridors,   setCorridors]   = useState<CorridorRisk[]>([])
   const [pendingCount, setPendingCount] = useState<number | null>(null)
 
-  useEffect(() => {
+  const load = () => {
     getIncidentStats().then(setStats).catch(() => {})
-    getIncidents("limit=6").then(setIncidents).catch(() => {})
+    getIncidents("status=active&limit=6").then(setIncidents).catch(() => {})
     getWeather().then(setWeather).catch(() => {})
     getPriorityRanking(5).then(setTopPriority).catch(() => {})
     getCorridorRisk().then(setCorridors).catch(() => {})
     getPendingReports().then(r => setPendingCount(r.length)).catch(() => {})
+  }
+
+  useEffect(() => {
+    load()
+    const t = setInterval(load, 15000)
+    return () => clearInterval(t)
   }, [])
 
   const kpis = [
@@ -50,8 +56,8 @@ export default function Dashboard() {
           <h1 className="text-base font-medium text-gov-900">Dashboard</h1>
           <p className="text-xs text-gray-400 mt-0.5">Bengaluru Traffic Police · Live operations</p>
         </div>
-        <span className="text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Live
+        <span className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>Live · 15s
         </span>
       </div>
 

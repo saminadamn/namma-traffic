@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useState, useCallback } from "react"
-import { getIncidents, resolveIncident, type Incident } from "@/lib/api"
+import { getIncidents, completeIncident, type Incident } from "@/lib/api"
 
 const PLAN: Record<string, { officers: number; barricades: number; radius: string }> = {
   accident:          { officers: 4,  barricades: 3, radius: "1 km"   },
@@ -17,6 +17,7 @@ const PLAN: Record<string, { officers: number; barricades: number; radius: strin
 const planFor = (cause: string) => PLAN[cause] || { officers: 2, barricades: 1, radius: "—" }
 
 interface ReleaseLog {
+  key: string   // unique per entry: id + release timestamp
   id: string
   address: string
   officers: number
@@ -52,9 +53,10 @@ export default function Resources() {
     setConfirmed(null)
     setResolving(inc.id)
     try {
-      await resolveIncident(inc.id)
+      await completeIncident(inc.id)
       const p = planFor(inc.event_cause)
       setReleased(prev => [{
+        key: `${inc.id}-${Date.now()}`,
         id: inc.id,
         address: inc.address,
         officers: p.officers,
@@ -78,7 +80,7 @@ export default function Resources() {
     <div className="p-3 sm:p-6 max-w-5xl mx-auto">
       <div className="mb-5">
         <h1 className="text-base font-medium text-gov-900">Resource allocation</h1>
-        <p className="text-xs text-gray-400 mt-0.5">Recommended deployment · mark events as handled to release officers</p>
+        <p className="text-xs text-gray-400 mt-0.5">Recommended deployment · end events to release officers and barricades</p>
       </div>
 
       {/* ── KPI strip ──────────────────────────────────────────────────────── */}
@@ -112,7 +114,7 @@ export default function Resources() {
           </div>
           <div className="space-y-1">
             {released.map(r => (
-              <div key={r.id} className="flex items-center gap-2 text-[11px] text-gray-600">
+              <div key={r.key} className="flex items-center gap-2 text-[11px] text-gray-600">
                 <svg className="w-3 h-3 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                 </svg>
@@ -176,12 +178,12 @@ export default function Resources() {
                         </span>
                       ) : isConfirming ? (
                         <span className="inline-flex items-center gap-1.5">
-                          <span className="text-[10px] text-amber-700">Confirm release?</span>
+                          <span className="text-[10px] text-amber-700">End event &amp; release?</span>
                           <button
                             onClick={() => handleResolve(inc)}
                             className="text-[10px] px-2 py-1 rounded-md bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors"
                           >
-                            Yes, handled
+                            Yes, end event
                           </button>
                           <button
                             onClick={() => cancelConfirm(inc.id)}
@@ -198,7 +200,7 @@ export default function Resources() {
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                           </svg>
-                          Event handled
+                          End Event
                         </button>
                       )}
                     </td>
@@ -221,7 +223,7 @@ export default function Resources() {
 
         {incidents.length > 0 && (
           <p className="text-[10px] text-gray-400 mt-3 border-t border-gray-50 pt-3">
-            Click <strong>Event handled</strong> to mark an incident resolved — this releases its officers and barricades
+            Click <strong>End Event</strong> to mark an incident completed — this releases all officers and barricades
             from the deployment count and removes it from the priority ranking and routing engine.
           </p>
         )}

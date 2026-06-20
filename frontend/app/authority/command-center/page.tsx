@@ -170,7 +170,7 @@ export default function CommandCenter() {
                 </div>
               </div>
               <p className="text-[10px] text-gray-400 mt-3 leading-relaxed">
-                Estimated from active-incident severity scores. Not a live HR integration.
+                Based on event-type deployment plan. Updates when events are ended in Resources.
               </p>
             </>
           ) : <p className="text-xs text-gray-400">Loading…</p>}

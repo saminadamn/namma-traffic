@@ -100,6 +100,7 @@ def _report_to_dict(r: CitizenReport) -> dict:
         "priority_probability": r.priority_probability,
         "risk_score": r.risk_score,
         "risk_band": r.risk_band,
+        "authenticated": r.authenticated,
     }
 
 
@@ -207,6 +208,18 @@ def create_incident(db: Session, data: dict, reporter_id=None) -> tuple[dict, bo
         pass   # scoring failure must not block incident creation
 
     return _incident_to_dict(incident), True
+
+
+def complete_incident(db: Session, incident_id: str) -> dict | None:
+    """Authority explicitly ends an event: status → 'completed', resources released."""
+    inc = db.query(Incident).filter(Incident.id == incident_id).first()
+    if inc is None:
+        return None
+    inc.status = "completed"
+    inc.resolved_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(inc)
+    return _incident_to_dict(inc)
 
 
 def resolve_incident(db: Session, incident_id: str) -> dict | None:
@@ -339,7 +352,7 @@ def dbscan_hotspots(db: Session, limit: int = 8) -> list[dict]:
         Incident.longitude,
         Incident.event_cause,
         Incident.address,
-    ).all()
+    ).filter(Incident.status == "active").all()
 
     if len(rows) < _DBSCAN_MIN_SAMPLES:
         return _STATIC_HOTSPOTS[:limit]
@@ -392,6 +405,7 @@ def create_report(
     db: Session, category: str, description: str, address: str,
     latitude: float, longitude: float, photo_url: str | None,
     reporter_id=None, veh_type: str | None = None, incident_type: str = "unplanned",
+    authenticated: bool = False,
 ) -> dict:
     report = CitizenReport(
         reporter_id=reporter_id,
@@ -406,11 +420,110 @@ def create_report(
         status="pending",
         veh_type=veh_type or None,
         incident_type=incident_type or "unplanned",
+        authenticated=authenticated,
     )
     db.add(report)
     db.commit()
     db.refresh(report)
+
+    # Run ML scoring synchronously — ARQ worker does the same thing but requires
+    # Redis. Running inline means scores are available immediately in the verify
+    # queue without any background infrastructure.
+    try:
+        from services import catboost_service, rules_engine as _bre
+        _now = datetime.now(timezone.utc)
+        _cause = (category or "others").lower().replace(" ", "_")
+        ml = catboost_service.predict(
+            event_type=incident_type or "unplanned",
+            latitude=latitude,
+            longitude=longitude,
+            event_cause=_cause,
+            authenticated=authenticated,
+            veh_type=veh_type,
+            start_datetime=_now.isoformat(),
+            description=description or "",
+        )
+        bre = _bre.evaluate(
+            closure_probability=ml["closure_probability"],
+            closure_prediction=ml["closure_prediction"],
+            priority_probability=ml["priority_probability"],
+            priority_prediction=ml["priority_prediction"],
+            event_cause=_cause,
+            date=_now.strftime("%Y-%m-%d"),
+            time=_now.strftime("%H:%M"),
+        )
+        report.closure_probability  = ml["closure_probability"]
+        report.priority_probability = ml["priority_probability"]
+        report.risk_score           = bre["risk_score"]
+        report.risk_band            = bre["risk_band"]
+        db.commit()
+        db.refresh(report)
+    except Exception as _exc:
+        import logging as _log
+        _log.getLogger("namma_traffic.scoring").warning(
+            "Inline ML scoring failed for report %s: %s", report.id, _exc
+        )
+
     return _report_to_dict(report)
+
+
+def score_pending_reports(db: Session) -> int:
+    """Score all pending CitizenReports that have no risk_score yet.
+    Called on startup so reports submitted before a code deploy get scored."""
+    from datetime import datetime as _dt, timezone as _tz
+    import logging as _log
+    _logger = _log.getLogger("namma_traffic.scoring")
+
+    unscored = (
+        db.query(CitizenReport)
+        .filter(CitizenReport.status == "pending")
+        .filter(CitizenReport.risk_score.is_(None))
+        .all()
+    )
+    if not unscored:
+        return 0
+
+    try:
+        from services import catboost_service, rules_engine as _bre
+    except Exception as e:
+        _logger.warning("ML services unavailable for batch scoring: %s", e)
+        return 0
+
+    scored = 0
+    for report in unscored:
+        try:
+            _now = _dt.now(_tz.utc)
+            _cause = (report.category or "others").lower().replace(" ", "_")
+            ml = catboost_service.predict(
+                event_type=report.incident_type or "unplanned",
+                latitude=report.latitude,
+                longitude=report.longitude,
+                event_cause=_cause,
+                authenticated=report.authenticated,
+                veh_type=report.veh_type,
+                start_datetime=_now.isoformat(),
+                description=report.description or "",
+            )
+            bre = _bre.evaluate(
+                closure_probability=ml["closure_probability"],
+                closure_prediction=ml["closure_prediction"],
+                priority_probability=ml["priority_probability"],
+                priority_prediction=ml["priority_prediction"],
+                event_cause=_cause,
+                date=_now.strftime("%Y-%m-%d"),
+                time=_now.strftime("%H:%M"),
+            )
+            report.closure_probability  = ml["closure_probability"]
+            report.priority_probability = ml["priority_probability"]
+            report.risk_score           = bre["risk_score"]
+            report.risk_band            = bre["risk_band"]
+            scored += 1
+        except Exception as e:
+            _logger.warning("Batch scoring failed for report %s: %s", report.id, e)
+    if scored:
+        db.commit()
+        _logger.info("Batch scored %d previously-unscored pending reports", scored)
+    return scored
 
 
 def list_reports(db: Session, status: str | None = None) -> list[dict]:

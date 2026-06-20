@@ -1,7 +1,7 @@
 """seed default admin user
 
-Revision ID: 0003
-Revises: 0002
+Revision ID: 0006
+Revises: 0005
 Create Date: 2026-06-19
 
 Seeds one super_admin account so the authority dashboard can be accessed
@@ -17,8 +17,8 @@ import sqlalchemy as sa
 from alembic import op
 from passlib.context import CryptContext
 
-revision = "0003"
-down_revision = "0002"
+revision = "0006"
+down_revision = "0005"
 branch_labels = None
 depends_on = None
 
@@ -29,6 +29,14 @@ _SUPER_ADMIN_ROLE_ID = 5   # matches ROLES order in 0001
 
 
 def upgrade() -> None:
+    bind = op.get_bind()
+    exists = bind.execute(
+        sa.text("SELECT 1 FROM users WHERE phone_number = :ph"),
+        {"ph": _PHONE},
+    ).fetchone()
+    if exists:
+        return
+
     pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
     user_id = uuid.uuid4()
 

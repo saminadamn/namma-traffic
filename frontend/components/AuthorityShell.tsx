@@ -17,9 +17,7 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
   const NAV = [
     { href: "/authority/command-center", label: t("nav_command_center"), icon: "▣" },
     { href: "/authority/dashboard",      label: t("nav_dashboard"),       icon: "▦" },
-    { href: "/authority/predict",        label: t("nav_predict"),         icon: "◈" },
-    { href: "/authority/simulate",       label: t("nav_simulate"),        icon: "◍" },
-    { href: "/authority/what-if",        label: t("nav_whatif"),          icon: "◑" },
+    { href: "/authority/predict",        label: t("nav_analysis"),        icon: "◈" },
     { href: "/authority/heatmap",        label: t("nav_heatmap_auth"),    icon: "◉" },
     { href: "/authority/resources",      label: t("nav_resources"),       icon: "◐" },
     { href: "/authority/verify",         label: t("nav_verify"),          icon: "◫" },
@@ -70,7 +68,10 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
           <Link key={href} href={href}
             onClick={() => setSidebarOpen(false)}
             className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] transition-colors ${
-              path === href ? "bg-gov-50 text-gov-500 font-medium" : "text-gray-600 hover:bg-gray-50"
+              (href === "/authority/predict"
+                ? (path === "/authority/predict" || path === "/authority/simulate" || path === "/authority/what-if")
+                : path === href)
+                ? "bg-gov-50 text-gov-500 font-medium" : "text-gray-600 hover:bg-gray-50"
             }`}>
             <span className="w-4 text-center">{icon}</span>{label}
           </Link>

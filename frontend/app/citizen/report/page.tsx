@@ -88,9 +88,11 @@ export default function ReportPage() {
   const [submitError,  setSubmitError]  = useState<string | null>(null)
   const [recent,       setRecent]       = useState<Report[]>([])
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [isPersonnel,  setIsPersonnel]  = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    setIsPersonnel(localStorage.getItem("namma_role") === "traffic_personnel")
     getReports().then(r => setRecent(r.slice(0, 3))).catch(() => {})
   }, [trackingId])
 
@@ -142,8 +144,8 @@ export default function ReportPage() {
     return (
       <div className="max-w-md mx-auto p-4">
         <div className="gov-card p-8 text-center">
-          <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${isPersonnel ? "bg-blue-50 border border-blue-200" : "bg-emerald-50 border border-emerald-200"}`}>
+            <svg className={`w-6 h-6 ${isPersonnel ? "text-blue-600" : "text-emerald-600"}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
           </div>
@@ -151,12 +153,26 @@ export default function ReportPage() {
           <p className="text-2xl font-bold text-gov-600 mt-2 tracking-widest">{trackingId}</p>
           <p className="text-xs text-gray-500 mt-1">{t("rpt_tracking_label")}</p>
 
-          <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-left">
-            <p className="text-xs font-medium text-amber-800 mb-1">Status: Awaiting verification</p>
-            <p className="text-[11px] text-amber-700 leading-relaxed">
-              A traffic officer will review your report. Once verified, it becomes a live incident on the map and affects route recommendations for all users.
-            </p>
-          </div>
+          {isPersonnel ? (
+            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-left">
+              <div className="flex items-center gap-1.5 mb-1">
+                <svg className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
+                <p className="text-xs font-semibold text-blue-800">Report auto-verified · Active incident created</p>
+              </div>
+              <p className="text-[11px] text-blue-700 leading-relaxed">
+                As a verified traffic personnel, your report was automatically authenticated and is now live on the map. No officer review required.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-left">
+              <p className="text-xs font-medium text-amber-800 mb-1">Status: Awaiting verification</p>
+              <p className="text-[11px] text-amber-700 leading-relaxed">
+                A traffic officer will review your report. Once verified, it becomes a live incident on the map and affects route recommendations for all users.
+              </p>
+            </div>
+          )}
 
           <button
             onClick={() => { setTracking(null); setDesc(""); setAddress(""); setSubmitError(null) }}
@@ -174,8 +190,22 @@ export default function ReportPage() {
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="mb-5">
-        <h1 className="text-base font-semibold text-gov-900">{t("rpt_title")}</h1>
-        <p className="text-xs text-gray-400 mt-0.5">{t("rpt_desc")}</p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h1 className="text-base font-semibold text-gov-900">{t("rpt_title")}</h1>
+          {isPersonnel && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+              </svg>
+              Traffic Personnel · Auto-verified
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-gray-400 mt-0.5">
+          {isPersonnel
+            ? "Your reports are automatically verified — no officer review needed"
+            : t("rpt_desc")}
+        </p>
       </div>
 
       <div className="flex flex-col lg:grid lg:grid-cols-3 gap-4">
@@ -339,26 +369,56 @@ export default function ReportPage() {
         <div className="space-y-4">
 
           {/* Verification flow info */}
-          <div className="gov-card p-4">
-            <p className="text-xs font-semibold text-gov-900 mb-3">Verification flow</p>
-            <ol className="space-y-2.5">
-              {[
-                { step: "Submit your report", sub: "Anonymous · no login required" },
-                { step: "ML risk scoring",    sub: "Automatic · closure probability calculated" },
-                { step: "Officer reviews",    sub: "Highest-risk reports triaged first" },
-                { step: "Goes live on map",   sub: "Affects route safety for all users" },
-              ].map((item, i) => (
-                <li key={i} className="flex items-start gap-2.5">
-                  <span className="w-5 h-5 rounded-full bg-gov-100 text-gov-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
-                    {i + 1}
-                  </span>
-                  <div>
-                    <p className="text-[11px] font-medium text-gray-800">{item.step}</p>
-                    <p className="text-[10px] text-gray-400">{item.sub}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
+          <div className={`gov-card p-4 ${isPersonnel ? "border-blue-100" : ""}`}>
+            <p className="text-xs font-semibold text-gov-900 mb-3">
+              {isPersonnel ? "Your report flow" : "Verification flow"}
+            </p>
+            {isPersonnel ? (
+              <>
+                <div className="mb-2 flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                  <svg className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                  </svg>
+                  <span className="text-[10px] font-semibold text-blue-700">Traffic Personnel · Auto-verified</span>
+                </div>
+                <ol className="space-y-2.5">
+                  {[
+                    { step: "Submit your report",   sub: "Logged in as Traffic Personnel",         color: "bg-blue-100 text-blue-700" },
+                    { step: "Instant verification", sub: "No officer review needed",                color: "bg-blue-100 text-blue-700" },
+                    { step: "Goes live on map",     sub: "Active incident created immediately",     color: "bg-blue-100 text-blue-700" },
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                      <span className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5 ${item.color}`}>
+                        {i + 1}
+                      </span>
+                      <div>
+                        <p className="text-[11px] font-medium text-gray-800">{item.step}</p>
+                        <p className="text-[10px] text-gray-400">{item.sub}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </>
+            ) : (
+              <ol className="space-y-2.5">
+                {[
+                  { step: "Submit your report", sub: "Anonymous · no login required" },
+                  { step: "ML risk scoring",    sub: "Automatic · closure probability calculated" },
+                  { step: "Officer reviews",    sub: "Highest-risk reports triaged first" },
+                  { step: "Goes live on map",   sub: "Affects route safety for all users" },
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-gov-100 text-gov-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                      {i + 1}
+                    </span>
+                    <div>
+                      <p className="text-[11px] font-medium text-gray-800">{item.step}</p>
+                      <p className="text-[10px] text-gray-400">{item.sub}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
           </div>
 
           {/* My recent reports */}

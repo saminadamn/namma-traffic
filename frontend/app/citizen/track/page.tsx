@@ -8,7 +8,13 @@ export default function TrackPage() {
   const [query, setQuery]     = useState("")
   const [reports, setReports] = useState<Report[]>([])
 
-  useEffect(() => { getReports().then(setReports).catch(() => {}) }, [])
+  useEffect(() => {
+    const fetchReports = () => getReports().then(setReports).catch(() => {})
+    fetchReports()
+    // Poll every 8 s so status updates (pending → approved → resolved) appear live
+    const t = setInterval(fetchReports, 8000)
+    return () => clearInterval(t)
+  }, [])
 
   const filtered = query
     ? reports.filter(r => r.tracking_id.toLowerCase().includes(query.toLowerCase()))

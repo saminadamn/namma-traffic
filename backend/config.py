@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
 
     # ── Multilingual advisory ──
+    sarvam_api_key: str = ""      # Sarvam AI translation (Indian languages)
     gemini_api_key: str = ""      # Gemini Flash advisory generation (free tier)
 
     # ── Bhashini translation (22 Indian languages) ──

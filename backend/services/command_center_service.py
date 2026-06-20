@@ -27,16 +27,31 @@ logger = logging.getLogger("namma_traffic.command_center")
 
 OFFICERS_TOTAL = 500
 
+# Mirrors the deployment plan in the frontend resources page — officers required
+# per active incident by event cause.  When an event is ended via the resources
+# page its incident moves to status="completed"; those incidents are excluded
+# from active_incidents, so the deployed count drops automatically.
+_OFFICER_PLAN: dict[str, int] = {
+    "accident":          4,
+    "public_event":      8,
+    "water_logging":     3,
+    "vehicle_breakdown": 2,
+    "tree_fall":         3,
+    "construction":      5,
+    "congestion":        3,
+    "pot_holes":         2,
+    "debris":            2,
+    "signal_failure":    2,
+}
 
-def _estimate_allocated_officers(active_incidents: list[dict]) -> int:
-    """Rough draw-down of the duty roster based on real active-incident
-    severity — not a real shift/roster system, but grounded in actual
-    data rather than invented."""
-    allocated = 0
-    for inc in active_incidents:
-        severity = inc.get("severity_score") or 20
-        allocated += max(2, round(severity / 8))
-    return allocated
+
+def _allocated_officers(active_incidents: list[dict]) -> int:
+    """Officers deployed = sum of per-cause plan across every active incident.
+    Matches the Resources page so both screens always agree."""
+    return sum(
+        _OFFICER_PLAN.get((inc.get("event_cause") or "").lower(), 2)
+        for inc in active_incidents
+    )
 
 
 def _maybe_generate_advisory(db) -> None:
@@ -68,7 +83,7 @@ def get_summary(db) -> dict:
 
     stats = incident_service.incident_stats(db)
     active_incidents = incident_service.list_incidents(db, status="active", limit=500)
-    allocated = _estimate_allocated_officers(active_incidents)
+    allocated = _allocated_officers(active_incidents)
 
     return {
         "active_incidents": stats["active"],

@@ -1,5 +1,7 @@
+import asyncio
 import logging
 import sys
+from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +15,7 @@ from alembic.config import Config as AlembicConfig
 from alembic import command as alembic_command
 from routers import api, auth, admin, websocket, explain, simulate, whatif, command_center, demo, advisory, translate, routing, ml_predict
 from services.model_service import ModelService
+from config import get_settings
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,15 +26,36 @@ logger = logging.getLogger("namma_traffic")
 
 model_service = ModelService()
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
+async def _migrate():
     try:
         cfg = AlembicConfig("alembic.ini")
-        cfg.set_main_option("sqlalchemy.url", os.getenv("DATABASE_URL", ""))
-        alembic_command.upgrade(cfg, "head")
+        cfg.set_main_option("sqlalchemy.url", get_settings().database_url)
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            await loop.run_in_executor(pool, lambda: alembic_command.upgrade(cfg, "head"))
         logger.info("Database migrations applied")
     except Exception as exc:
-        logger.error("Migration error (continuing): %s", exc)
+        logger.error("Migration error: %s", exc)
+
+
+async def _score_pending():
+    """Score any pending reports that arrived without ML scores (e.g. before a
+    deploy that added inline scoring).  Runs once on startup, non-blocking."""
+    try:
+        from core.database import SessionLocal
+        from services import incident_service
+        with SessionLocal() as db:
+            n = incident_service.score_pending_reports(db)
+            if n:
+                logger.info("Startup: scored %d pending reports", n)
+    except Exception as exc:
+        logger.warning("Startup scoring skipped: %s", exc)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    asyncio.create_task(_migrate())       # non-blocking: server starts immediately
+    asyncio.create_task(_score_pending()) # score unscored pending reports
     app.state.model_service = model_service
     logger.info("Namma Traffic API started (models load on first predict)")
     yield

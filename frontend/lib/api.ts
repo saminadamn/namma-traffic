@@ -44,9 +44,14 @@ export const getPendingReports = ()              => api<Report[]>("/api/reports?
 export const getCorridorRisk  = ()               => api<CorridorRisk[]>("/api/incidents/corridor-risk")
 export const verifyReport     = (b: object)      => api("/api/reports/verify", { method: "PATCH", body: JSON.stringify(b) })
 export const submitReport     = async (f: FormData) => {
+  const token = typeof window !== "undefined" ? localStorage.getItem("namma_token") : null
   let res: Response
   try {
-    res = await fetch(`${BASE}/api/reports`, { method: "POST", body: f })
+    res = await fetch(`${BASE}/api/reports`, {
+      method: "POST",
+      body: f,
+      ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+    })
   } catch {
     throw new Error(`Cannot reach backend at ${BASE} — is the server running?`)
   }
@@ -75,6 +80,7 @@ export const generateDemoData = (b?: Partial<DemoDataRequest>) =>
   api<DemoDataResponse>("/generate-demo-data", { method: "POST", body: JSON.stringify(b || {}) })
 export const getPriorityRanking  = (limit = 10) => api<Incident[]>(`/api/incidents/priority-ranking?limit=${limit}`)
 export const resolveIncident     = (id: string) => api<Incident>(`/api/incidents/${id}/resolve`, { method: "PATCH" })
+export const completeIncident    = (id: string) => api<Incident>(`/api/incidents/${id}/complete`, { method: "PATCH" })
 
 // ── Predict input / output ───────────────────────────────────────────────────
 export interface EventInput {

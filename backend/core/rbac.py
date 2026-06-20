@@ -70,6 +70,26 @@ async def get_current_user(
     return user
 
 
+async def get_optional_user(
+    token: str | None = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """Like get_current_user but returns None instead of raising when no/bad token.
+    Used on endpoints that serve both anonymous and authenticated callers."""
+    if token is None:
+        return None
+    try:
+        payload = decode_token(token)
+        if payload.get("type") != "access":
+            return None
+        user_id = payload.get("sub")
+        from uuid import UUID
+        user = db.get(User, UUID(user_id))
+        return user if (user and user.is_active) else None
+    except Exception:
+        return None
+
+
 async def get_current_active_user(user: User = Depends(get_current_user)) -> User:
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Inactive user")

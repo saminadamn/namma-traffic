@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { getPendingReports, verifyReport, getReports, type Report } from "@/lib/api"
 
 const BAND_BG: Record<string, string> = {
@@ -41,8 +41,8 @@ export default function ReportsQueuePage() {
   const [loading,    setLoading]    = useState(true)
   const [verifying,  setVerifying]  = useState<string | null>(null)
 
-  const reload = useCallback(async () => {
-    setLoading(true)
+  const fetchData = useCallback(async (showSpinner = false) => {
+    if (showSpinner) setLoading(true)
     try {
       const [p, v] = await Promise.all([
         getPendingReports(),
@@ -51,29 +51,46 @@ export default function ReportsQueuePage() {
       setPending(p)
       setVerified(v)
     } catch { /* keep stale data */ }
-    finally { setLoading(false) }
+    finally { if (showSpinner) setLoading(false) }
   }, [])
 
-  useEffect(() => { reload() }, [reload])
+  const reload = useCallback(() => fetchData(true), [fetchData])
+
+  // Track verifying ref so the interval can skip refresh during active action
+  const verifyingRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    fetchData(true)
+    const t = setInterval(() => {
+      if (!verifyingRef.current) fetchData(false) // silent background refresh
+    }, 10000)
+    return () => clearInterval(t)
+  }, [fetchData])
 
   const act = async (report: Report, action: "approve" | "reject") => {
     setVerifying(report.id)
+    verifyingRef.current = report.id
     try {
       await verifyReport({ report_id: report.id, action })
-      await reload()
+      await fetchData(true)
     } catch { /* toast would go here */ }
-    finally { setVerifying(null) }
+    finally { setVerifying(null); verifyingRef.current = null }
   }
 
   const displayed = tab === "pending" ? pending : verified
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
-      <div className="mb-5">
-        <h1 className="text-base font-semibold text-gov-900">Reports queue</h1>
-        <p className="text-xs text-gray-400 mt-0.5">
-          Citizen reports sorted by ML risk score — verify to promote to active incident
-        </p>
+      <div className="flex items-start justify-between mb-5">
+        <div>
+          <h1 className="text-base font-semibold text-gov-900">Reports queue</h1>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Citizen reports sorted by ML risk score — verify to promote to active incident
+          </p>
+        </div>
+        <span className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full flex items-center gap-1.5 flex-shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />Live · 10s
+        </span>
       </div>
 
       {/* Tabs */}
