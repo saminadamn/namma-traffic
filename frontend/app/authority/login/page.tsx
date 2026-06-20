@@ -30,6 +30,7 @@ export default function AuthorityLoginPage() {
       const res = await authLogin(identifier, password)
       localStorage.setItem("namma_token", res.access_token)
       localStorage.setItem("namma_refresh", res.refresh_token)
+      localStorage.setItem("namma_role", "authority")
       router.push("/authority/dashboard")
     } catch {
       setError(t("login_error"))

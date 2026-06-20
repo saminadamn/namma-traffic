@@ -43,6 +43,7 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
   const logout = () => {
     localStorage.removeItem("namma_token")
     localStorage.removeItem("namma_refresh")
+    localStorage.removeItem("namma_role")
     router.push("/authority/login")
   }
 
