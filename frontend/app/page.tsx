@@ -4,74 +4,19 @@ import Link from "next/link"
 import PublicHeader from "@/components/PublicHeader"
 import { useLanguage } from "@/contexts/LanguageContext"
 
-const FAQ_CATEGORIES = [
-  {
-    label: "What can I do here?",
-    items: [
-      {
-        q: "What is Namma Traffic AI?",
-        a: "Namma Traffic AI is a smart traffic platform for Bengaluru. As a citizen you can report traffic incidents, find safe routes that avoid active closures, and view live hotspots across the city. Traffic authorities and field personnel get additional tools — congestion forecasting, resource planning, diversion generation, and a real-time command center.",
-      },
-      {
-        q: "Do I need an account to use this?",
-        a: "No account is needed for citizens. You can view the live Traffic Hotspots map and plan safe routes without signing up. To report an incident and get a tracking ID, just fill in the report form — no registration required. Traffic Personnel and Authority officers sign in with government-issued credentials.",
-      },
-    ],
-  },
-  {
-    label: "Reporting & tracking",
-    items: [
-      {
-        q: "How do I report a traffic incident?",
-        a: "From the home page choose 'I'm a citizen', or tap Report in the nav. Select the category (accident, congestion, road closure, waterlogging, etc.), describe what you see, pin your location, and optionally attach a photo. Hit Submit — you'll get a unique tracking ID like NMT-2025-00123 that you can use to follow up.",
-      },
-      {
-        q: "How do I check what happened to my report?",
-        a: "Visit the Track page and enter your tracking ID. You'll see the current status — Pending (received), Verified (confirmed by traffic personnel), or Resolved (addressed). Each status update includes a timestamp so you know how fast the response was.",
-      },
-    ],
-  },
-  {
-    label: "Getting around Bengaluru",
-    items: [
-      {
-        q: "How do I find a safe route?",
-        a: "Go to Safe Route from the navigation. Enter your starting point and destination — the platform calculates a path that avoids active road closures and routes around accident zones. The map highlights your safe path in blue and shows the incidents it avoided in red.",
-      },
-      {
-        q: "What does the Traffic Hotspots map show?",
-        a: "The Traffic Hotspots map shows live incident density across Bengaluru. Hotter zones mean more active incidents. You can filter by incident type (accident, congestion, closure, etc.) and tap any hotspot to see the details. The map updates in real time as new reports come in.",
-      },
-    ],
-  },
-  {
-    label: "For traffic authorities",
-    items: [
-      {
-        q: "What can authority officers do on this platform?",
-        a: "Authority officers get access to the full command center: view live incidents and predicted congestion zones, allocate officers and barricades using AI-suggested placements, generate diversion plans for affected corridors, simulate event scenarios, and verify or escalate citizen reports — all from one dashboard.",
-      },
-      {
-        q: "How is Traffic Personnel different from an Authority account?",
-        a: "Traffic Personnel are government-verified field officers. They sign in at the Personnel login and their incident reports are automatically authenticated — no manual review needed. Authority accounts (control room officers) have full dashboard access including prediction, simulation, and resource planning tools.",
-      },
-    ],
-  },
-  {
-    label: "Your data",
-    items: [
-      {
-        q: "Is my location data stored permanently?",
-        a: "Location data attached to your incident report is used by traffic authorities to respond to the incident. After 90 days, precise coordinates are rounded to an area level and your details are anonymised. Route searches are never stored — they run directly in your browser. Contact Bengaluru Traffic Police via the official helpline to remove a specific report.",
-      },
-    ],
-  },
-]
 
 export default function Home() {
   const { t } = useLanguage()
 
   const [faqOpen, setFaqOpen] = useState<number | null>(null)
+  const faqItems = [
+    { q: t("faq_q1"), a: t("faq_a1") },
+    { q: t("faq_q2"), a: t("faq_a2") },
+    { q: t("faq_q3"), a: t("faq_a3") },
+    { q: t("faq_q4"), a: t("faq_a4") },
+    { q: t("faq_q5"), a: t("faq_a5") },
+    { q: t("faq_q6"), a: t("faq_a6") },
+  ]
   const [userRole, setUserRole] = useState<string | null>(null)
 
   useEffect(() => {
@@ -304,34 +249,24 @@ export default function Home() {
       <section className="border-t border-gray-100">
         <div className="max-w-6xl mx-auto px-4 py-8">
           <p className="text-xl font-bold text-gov-900 mb-6">{t("faq_title")}</p>
-          <div className="space-y-4">
-            {FAQ_CATEGORIES.map((cat, ci) => (
-              <div key={ci}>
-                <p className="text-[11px] font-semibold text-gov-500 uppercase tracking-widest mb-2 px-1">{cat.label}</p>
-                <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
-                  {cat.items.map((item, ii) => {
-                    const idx = ci * 10 + ii
-                    return (
-                      <div key={ii} className="bg-white">
-                        <button
-                          onClick={() => setFaqOpen(faqOpen === idx ? null : idx)}
-                          className="w-full text-left px-4 py-3 flex items-start justify-between gap-4 hover:bg-gray-50/70 transition-colors">
-                          <span className="text-sm font-medium text-gov-900 leading-snug">{item.q}</span>
-                          <svg
-                            className={`w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5 transition-transform duration-200 ${faqOpen === idx ? "rotate-180" : ""}`}
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                        {faqOpen === idx && (
-                          <div className="px-4 pb-4 text-sm text-gray-500 leading-relaxed border-t border-gray-50 bg-gray-50/40">
-                            {item.a}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
+          <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
+            {faqItems.map((item, idx) => (
+              <div key={idx} className="bg-white">
+                <button
+                  onClick={() => setFaqOpen(faqOpen === idx ? null : idx)}
+                  className="w-full text-left px-4 py-3 flex items-start justify-between gap-4 hover:bg-gray-50/70 transition-colors">
+                  <span className="text-sm font-medium text-gov-900 leading-snug">{item.q}</span>
+                  <svg
+                    className={`w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5 transition-transform duration-200 ${faqOpen === idx ? "rotate-180" : ""}`}
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {faqOpen === idx && (
+                  <div className="px-4 pb-4 text-sm text-gray-500 leading-relaxed border-t border-gray-50 bg-gray-50/40">
+                    {item.a}
+                  </div>
+                )}
               </div>
             ))}
           </div>
