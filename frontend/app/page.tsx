@@ -36,48 +36,47 @@ export default function Home() {
 
       {/* ── HERO ────────────────────────────────────────────────────── */}
       <section className="bg-[#F4F7FB] border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 py-6 md:py-10 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 items-center">
+        <div className="max-w-6xl mx-auto px-4 py-4 md:py-10 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-10 items-center">
 
           {/* LEFT */}
           <div>
-            <div className="inline-flex items-center gap-2 bg-white border border-gray-200 text-gov-700 text-xs font-medium px-3 py-1.5 rounded-full mb-5">
+            <div className="inline-flex items-center gap-2 bg-white border border-gray-200 text-gov-700 text-xs font-medium px-3 py-1.5 rounded-full mb-3">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
               {t("hero_live_badge")}
             </div>
 
-            <h1 className="text-3xl md:text-5xl font-bold text-gov-900 leading-tight tracking-tight">
+            <h1 className="text-2xl md:text-5xl font-bold text-gov-900 leading-tight tracking-tight">
               {t("hero_title_1")}
               <br />
               <span className="text-gov-500">{t("hero_title_2")}</span>
             </h1>
 
-            <p className="mt-4 text-gray-500 text-sm md:text-base leading-relaxed max-w-md">
+            <p className="mt-2 md:mt-4 text-gray-500 text-sm md:text-base leading-relaxed max-w-md">
               {t("hero_desc")}
             </p>
-
           </div>
 
-          {/* RIGHT — clean image, no floating cards */}
-          <div className="flex justify-center md:justify-end overflow-hidden rounded-2xl">
+          {/* RIGHT — hidden on mobile to keep hero compact */}
+          <div className="hidden md:flex justify-end overflow-hidden rounded-2xl">
             <img
               src="/assets/car.jpg"
               alt="Bengaluru traffic management"
-              className="w-full h-64 sm:h-80 md:h-auto max-w-full rounded-2xl object-cover md:object-contain"
+              className="w-full md:h-auto max-w-full rounded-2xl object-contain"
             />
           </div>
         </div>
 
         {/* Stats strip */}
-        <div className="max-w-6xl mx-auto px-4 pb-5 flex flex-wrap gap-4 sm:gap-8">
+        <div className="max-w-6xl mx-auto px-4 pb-4 flex gap-5 sm:gap-8">
           {[
             { val: "< 120ms", label: t("stat_latency") },
             { val: "0.784",   label: t("stat_accuracy") },
             { val: "Real-Time", label: t("stat_commuters") },
           ].map((s, i, arr) => (
-            <div key={s.label} className="flex items-center gap-4">
+            <div key={s.label} className="flex items-center gap-3 sm:gap-4">
               <div>
-                <p className="text-xl font-semibold text-gov-900">{s.val}</p>
-                <p className="text-[11px] text-gray-400 mt-0.5">{s.label}</p>
+                <p className="text-base sm:text-xl font-semibold text-gov-900">{s.val}</p>
+                <p className="text-[10px] sm:text-[11px] text-gray-400 mt-0.5">{s.label}</p>
               </div>
               {i < arr.length - 1 && <div className="hidden sm:block w-px h-8 bg-gray-200" />}
             </div>

@@ -77,7 +77,7 @@ export default function Dashboard() {
     <div className="p-3 sm:p-6">
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 sm:mb-5">
         <div>
           <h1 className="text-base font-medium text-gov-900">Dashboard</h1>
           <p className="text-xs text-gray-400 mt-0.5">Bengaluru Traffic Police · City operations overview</p>
@@ -123,21 +123,21 @@ export default function Dashboard() {
       )}
 
       {/* Incident KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-2 sm:mb-3">
         {incidentKpis.map(k => (
-          <div key={k.label} className="gov-card p-4">
-            <p className="text-[11px] text-gray-500 mb-1">{k.label}</p>
-            <p className={`text-2xl font-medium ${k.color}`}>{k.value}</p>
+          <div key={k.label} className="gov-card p-3 sm:p-4">
+            <p className="text-[10px] sm:text-[11px] text-gray-500 mb-1 leading-tight">{k.label}</p>
+            <p className={`text-xl sm:text-2xl font-medium ${k.color}`}>{k.value}</p>
           </div>
         ))}
       </div>
 
       {/* Operations KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-4 sm:mb-5">
         {opsKpis.map(k => (
-          <div key={k.label} className="gov-card p-4">
-            <p className="text-[11px] text-gray-500 mb-1">{k.label}</p>
-            <p className={`text-2xl font-medium ${k.color}`}>{k.value}</p>
+          <div key={k.label} className="gov-card p-3 sm:p-4">
+            <p className="text-[10px] sm:text-[11px] text-gray-500 mb-1 leading-tight">{k.label}</p>
+            <p className={`text-xl sm:text-2xl font-medium ${k.color}`}>{k.value}</p>
           </div>
         ))}
       </div>
@@ -146,7 +146,7 @@ export default function Dashboard() {
       <div className="gov-card p-4 mb-4">
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm font-medium text-gov-900">Top priority incidents</p>
-          <span className="text-[10px] text-gray-400">severity · congestion · proximity · closure probability</span>
+          <span className="hidden sm:inline text-[10px] text-gray-400">severity · congestion · proximity · closure probability</span>
         </div>
         {topPriority.length === 0 ? <p className="text-xs text-gray-400">No active incidents to rank.</p> : (
           <div className="space-y-2">
