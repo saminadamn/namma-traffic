@@ -36,7 +36,11 @@ export default function AuthoritySignupPage() {
   if (success) return (
     <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center px-4">
       <div className="gov-card p-8 max-w-sm w-full text-center">
-        <div className="text-4xl mb-3">✅</div>
+        <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto mb-4">
+          <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+          </svg>
+        </div>
         <h2 className="text-lg font-semibold text-gov-900">Account created</h2>
         <p className="text-sm text-gray-500 mt-2 leading-relaxed">
           Your account is registered with the <strong>citizen</strong> role.
@@ -52,7 +56,11 @@ export default function AuthoritySignupPage() {
     <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-2xl mx-auto mb-3">🛡️</div>
+          <div className="w-12 h-12 bg-gov-50 border border-gov-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+            <svg className="w-6 h-6 text-gov-500" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+            </svg>
+          </div>
           <h1 className="text-xl font-semibold text-gov-900">Request authority access</h1>
           <p className="text-sm text-gray-500 mt-1">Register your account · Role assigned by admin</p>
         </div>
