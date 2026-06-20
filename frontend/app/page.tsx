@@ -1,11 +1,8 @@
 "use client"
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import PublicHeader from "@/components/PublicHeader"
 import { useLanguage } from "@/contexts/LanguageContext"
-
-interface NominatimResult { display_name: string; lat: string; lon: string }
 
 const FAQ_CATEGORIES = [
   {
@@ -71,50 +68,8 @@ const FAQ_CATEGORIES = [
   },
 ]
 
-async function searchPlaces(q: string): Promise<NominatimResult[]> {
-  if (q.trim().length < 2) return []
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q + " Bengaluru")}&format=json&limit=5&countrycodes=in`,
-      { headers: { "Accept-Language": "en" } }
-    )
-    return res.json()
-  } catch { return [] }
-}
-
 export default function Home() {
   const { t } = useLanguage()
-  const router = useRouter()
-  const [query,       setQuery]       = useState("")
-  const [suggestions, setSuggestions] = useState<NominatimResult[]>([])
-  const [searching,   setSearching]   = useState(false)
-  const [dropOpen,    setDropOpen]    = useState(false)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const handleInput = (v: string) => {
-    setQuery(v)
-    if (timer.current) clearTimeout(timer.current)
-    if (v.trim().length < 2) { setSuggestions([]); setDropOpen(false); return }
-    timer.current = setTimeout(async () => {
-      setSearching(true)
-      const results = await searchPlaces(v)
-      setSuggestions(results)
-      setDropOpen(results.length > 0)
-      setSearching(false)
-    }, 380)
-  }
-
-  const handleSearch = () => {
-    if (!query.trim()) return
-    router.push(`/citizen/heatmap?q=${encodeURIComponent(query.trim())}`)
-  }
-
-  const selectSuggestion = (item: NominatimResult) => {
-    const name = item.display_name.split(", ").slice(0, 2).join(", ")
-    const params = new URLSearchParams({ q: name, lat: item.lat, lon: item.lon })
-    router.push(`/citizen/route?${params.toString()}`)
-    setDropOpen(false)
-  }
 
   const [faqOpen, setFaqOpen] = useState<number | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
@@ -136,7 +91,7 @@ export default function Home() {
 
       {/* ── HERO ────────────────────────────────────────────────────── */}
       <section className="bg-[#F4F7FB] border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 py-10 md:py-16 grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
+        <div className="max-w-6xl mx-auto px-4 py-6 md:py-10 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 items-center">
 
           {/* LEFT */}
           <div>
@@ -155,62 +110,6 @@ export default function Home() {
               {t("hero_desc")}
             </p>
 
-            {/* Search — hidden on mobile */}
-            <div className="mt-6 relative max-w-lg hidden sm:block">
-              <div className="flex bg-white border border-gray-300 rounded-xl p-1 items-center shadow-sm focus-within:border-gov-400 focus-within:shadow-md transition-all">
-                <span className="px-3 text-gray-400 flex-shrink-0">
-                  {searching
-                    ? <span className="inline-block w-4 h-4 border-2 border-gov-400 border-t-transparent rounded-full animate-spin" />
-                    : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                  }
-                </span>
-                <input
-                  className="flex-1 text-sm outline-none bg-transparent py-2"
-                  placeholder={t("hero_search_placeholder")}
-                  value={query}
-                  onChange={e => handleInput(e.target.value)}
-                  onFocus={() => { if (suggestions.length) setDropOpen(true) }}
-                  onBlur={() => setTimeout(() => setDropOpen(false), 180)}
-                  onKeyDown={e => e.key === "Enter" && handleSearch()}
-                />
-                <button className="gov-btn !py-2 !px-4 !rounded-lg !text-xs flex-shrink-0" onClick={handleSearch}>
-                  {t("hero_search_btn")}
-                </button>
-              </div>
-
-              {dropOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
-                  {suggestions.map((s, i) => {
-                    const parts = s.display_name.split(", ")
-                    return (
-                      <button key={i} onMouseDown={() => selectSuggestion(s)}
-                        className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-0 flex items-start gap-3 transition-colors">
-                        <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        </svg>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm text-gray-800 truncate">{parts[0]}</p>
-                          <p className="text-xs text-gray-400 truncate">{parts.slice(1, 3).join(", ")}</p>
-                        </div>
-                        <span className="text-xs text-gov-500 flex-shrink-0 font-medium">Safe route →</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-
-            <p className="mt-3 text-xs text-gray-400 hidden sm:block">
-              <Link href="/citizen/report" className="hover:text-gov-500 transition-colors">{t("hero_link_report")}</Link>
-              <span className="mx-2 text-gray-200">|</span>
-              <Link href="/citizen/heatmap" className="hover:text-gov-500 transition-colors">{t("hero_link_heatmap")}</Link>
-              <span className="mx-2 text-gray-200">|</span>
-              <Link href="/citizen/track" className="hover:text-gov-500 transition-colors">{t("hero_link_track")}</Link>
-            </p>
           </div>
 
           {/* RIGHT — clean image, no floating cards */}
@@ -224,7 +123,7 @@ export default function Home() {
         </div>
 
         {/* Stats strip */}
-        <div className="max-w-6xl mx-auto px-4 pb-8 flex flex-wrap gap-4 sm:gap-8">
+        <div className="max-w-6xl mx-auto px-4 pb-5 flex flex-wrap gap-4 sm:gap-8">
           {[
             { val: "2.4M+", label: "Daily commuters served" },
             { val: "< 3s",  label: "AI prediction latency" },
@@ -242,7 +141,7 @@ export default function Home() {
       </section>
 
       {/* ── ROLE SELECTION / QUICK ACCESS ──────────────────────────── */}
-      <section className="max-w-6xl mx-auto px-4 pb-12">
+      <section className="max-w-6xl mx-auto px-4 py-6">
         {userRole === "traffic_personnel" ? (
           /* ── Personnel: quick actions, no citizen card ── */
           <>
@@ -349,15 +248,12 @@ export default function Home() {
 
       {/* ── FAQ ─────────────────────────────────────────────────────── */}
       <section className="border-t border-gray-100">
-        <div className="max-w-6xl mx-auto px-4 py-12">
-          <div className="mb-10">
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">FAQ</h2>
-            <p className="text-2xl font-bold text-gov-900">Frequently asked questions</p>
-          </div>
-          <div className="space-y-8">
+        <div className="max-w-6xl mx-auto px-4 py-8">
+          <p className="text-xl font-bold text-gov-900 mb-6">Frequently asked questions</p>
+          <div className="space-y-4">
             {FAQ_CATEGORIES.map((cat, ci) => (
               <div key={ci}>
-                <p className="text-[11px] font-semibold text-gov-500 uppercase tracking-widest mb-3 px-1">{cat.label}</p>
+                <p className="text-[11px] font-semibold text-gov-500 uppercase tracking-widest mb-2 px-1">{cat.label}</p>
                 <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
                   {cat.items.map((item, ii) => {
                     const idx = ci * 10 + ii
@@ -365,7 +261,7 @@ export default function Home() {
                       <div key={ii} className="bg-white">
                         <button
                           onClick={() => setFaqOpen(faqOpen === idx ? null : idx)}
-                          className="w-full text-left px-5 py-4 flex items-start justify-between gap-4 hover:bg-gray-50/70 transition-colors">
+                          className="w-full text-left px-4 py-3 flex items-start justify-between gap-4 hover:bg-gray-50/70 transition-colors">
                           <span className="text-sm font-medium text-gov-900 leading-snug">{item.q}</span>
                           <svg
                             className={`w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5 transition-transform duration-200 ${faqOpen === idx ? "rotate-180" : ""}`}
@@ -374,7 +270,7 @@ export default function Home() {
                           </svg>
                         </button>
                         {faqOpen === idx && (
-                          <div className="px-5 pb-5 text-sm text-gray-500 leading-relaxed border-t border-gray-50 bg-gray-50/40">
+                          <div className="px-4 pb-4 text-sm text-gray-500 leading-relaxed border-t border-gray-50 bg-gray-50/40">
                             {item.a}
                           </div>
                         )}
