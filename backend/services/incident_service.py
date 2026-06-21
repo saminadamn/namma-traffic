@@ -326,28 +326,14 @@ def analytics_summary(db: Session) -> dict:
     }
 
 
-_STATIC_HOTSPOTS = [
-    {"junction": "Mekhri Circle",           "count": 64, "lat": 13.0108, "lon": 77.5858, "dominant_cause": "public_event"},
-    {"junction": "Ayyappa Temple Junction", "count": 49, "lat": 12.9165, "lon": 77.6101, "dominant_cause": "vehicle_breakdown"},
-    {"junction": "Satellite Bus Stand",     "count": 43, "lat": 12.9784, "lon": 77.5408, "dominant_cause": "vehicle_breakdown"},
-    {"junction": "Yeshwanthpura Circle",    "count": 38, "lat": 13.0298, "lon": 77.5525, "dominant_cause": "vehicle_breakdown"},
-    {"junction": "Yelahanka Circle",        "count": 34, "lat": 13.1007, "lon": 77.5963, "dominant_cause": "construction"},
-    {"junction": "KR Circle",              "count": 31, "lat": 12.9767, "lon": 77.5713, "dominant_cause": "tree_fall"},
-    {"junction": "Silk Board Junction",    "count": 29, "lat": 12.9170, "lon": 77.6230, "dominant_cause": "accident"},
-    {"junction": "Hebbal Flyover",         "count": 27, "lat": 13.0358, "lon": 77.5970, "dominant_cause": "water_logging"},
-]
-
 # 500 m radius, 2 incidents minimum — tuned so even a small demo DB produces clusters.
 _DBSCAN_EPS_KM = 0.5
 _DBSCAN_MIN_SAMPLES = 2
 
 
 def dbscan_hotspots(db: Session, limit: int = 8) -> list[dict]:
-    """DBSCAN clustering on incident lat/lon.
-
-    Falls back to _STATIC_HOTSPOTS when the DB has fewer incidents than
-    _DBSCAN_MIN_SAMPLES so the demo map is never empty.
-    """
+    """DBSCAN clustering on active incidents only. Returns [] when there are
+    fewer active incidents than _DBSCAN_MIN_SAMPLES."""
     import numpy as np
     from collections import Counter
     from sklearn.cluster import DBSCAN
@@ -360,7 +346,7 @@ def dbscan_hotspots(db: Session, limit: int = 8) -> list[dict]:
     ).filter(Incident.status == "active").all()
 
     if len(rows) < _DBSCAN_MIN_SAMPLES:
-        return _STATIC_HOTSPOTS[:limit]
+        return []
 
     coords = np.array([[r.latitude, r.longitude] for r in rows])
     # haversine metric expects radians; eps must also be in radians

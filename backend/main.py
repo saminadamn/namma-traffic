@@ -80,11 +80,21 @@ async def _score_pending():
         logger.warning("Startup scoring skipped: %s", exc)
 
 
+async def _flush_hotspot_cache():
+    """Delete the hotspot Redis cache on startup so stale entries never survive a deploy."""
+    try:
+        from core.redis_client import cache_delete
+        await cache_delete("hotspots:cached")
+    except Exception:
+        pass
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    asyncio.create_task(_migrate())       # non-blocking: server starts immediately
-    asyncio.create_task(_ensure_schema()) # guarantee columns exist regardless of migration state
-    asyncio.create_task(_score_pending()) # score unscored pending reports
+    asyncio.create_task(_migrate())            # non-blocking: server starts immediately
+    asyncio.create_task(_ensure_schema())      # guarantee columns exist regardless of migration state
+    asyncio.create_task(_score_pending())      # score unscored pending reports
+    asyncio.create_task(_flush_hotspot_cache()) # evict stale hotspot cache on every deploy
     app.state.model_service = model_service
     logger.info("Namma Traffic API started (models load on first predict)")
     yield
