@@ -1,5 +1,26 @@
-# Namma Traffic — Incremental Backend Extension Plan
-### Staff Engineer Review · Priority 1 Shipped This PR · Priorities 2–7 Scoped
+# Namma AI — Backend Extension Plan
+### Historical planning document — all priorities shipped as of Flipkart Gridlock 2.0
+
+**Status as of current codebase:**
+
+| Priority | Title | Status |
+|---|---|---|
+| 1 | Auth + RBAC + JWT | ✅ Shipped |
+| 2 | Incident management + WebSockets | ✅ Shipped |
+| 3 | Redis + ARQ background jobs | ✅ Shipped |
+| 4 | ML prediction (CatBoost + XGBoost) | ✅ Shipped — two separate pipelines: `model_service.py` (pkl, SHAP) and `catboost_service.py` (native .cbm, closure + priority) |
+| 5 | Emergency / safe routing | ✅ Shipped — OSRM safe route (`routers/routing.py`) + ASTRAM diversion engine (`diversion_engine/`) |
+| 6 | Multilingual AI advisory | ✅ Shipped — Gemini Flash advisory + Sarvam AI / Bhashini translation + static bundled fallback |
+| 7 | Dashboard analytics | ✅ Shipped — real SQL aggregates in `incident_service.analytics_summary()` |
+| + | What-if corridor analysis | ✅ Added — `services/whatif_service.py` |
+| + | Event congestion simulation | ✅ Added — `services/simulation_service.py` |
+| + | SHAP explainability endpoint | ✅ Added — `routers/explain.py` |
+| + | Command center summary | ✅ Added — `services/command_center_service.py` |
+| + | Priority ranking | ✅ Added — `services/priority_service.py` |
+
+See [IMPLEMENTATION.md](../IMPLEMENTATION.md) for the step-by-step build log with code samples.
+
+---
 
 ---
 

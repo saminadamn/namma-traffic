@@ -1,9 +1,9 @@
 # Namma Traffic — Sprint Implementation Report
 
-**Project:** Namma Traffic — AI-Powered Traffic Intelligence Platform, Bengaluru  
+**Project:** Namma AI — AI-Powered Traffic Intelligence Platform, Bengaluru  
 **Hackathon:** Flipkart Gridlock 2.0  
 **Team:** BIT Mesra — CSE Department  
-**Stack:** Next.js 14 · FastAPI · PostgreSQL · LightGBM/XGBoost/CatBoost · Gemini 1.5 Flash · Sarvam AI
+**Stack:** Next.js 14 · FastAPI · PostgreSQL · CatBoost/XGBoost · Gemini Flash · Sarvam AI · Bhashini · OSRM · ASTRAM
 
 ---
 
@@ -480,58 +480,113 @@ def _has_postgis(db: Session) -> bool:
 
 ```
 backend/
-├── main.py                    # FastAPI app, routers, rate limiter, Prometheus
+├── main.py                    # FastAPI app, all routers, rate limiter
 ├── worker.py                  # ARQ background worker (run separately)
-├── config.py                  # Settings (pydantic-settings, .env)
+├── config.py                  # pydantic-settings — all env vars
 ├── core/
 │   ├── database.py            # SQLAlchemy engine + session
 │   ├── security.py            # JWT + bcrypt utilities
-│   ├── rbac.py                # Auth dependencies + permission checks
+│   ├── rbac.py                # get_current_user, require_permission()
 │   └── redis_client.py        # Singleton Redis client (graceful fallback)
 ├── db_models/
 │   ├── user.py                # User, Role, Permission, RefreshToken, AuditLog
 │   └── incident.py            # Incident, CitizenReport, IncidentType
 ├── services/
-│   ├── model_service.py       # CatBoost+XGBoost ensemble + SHAP
-│   ├── incident_service.py    # CRUD + DBSCAN + analytics SQL
+│   ├── model_service.py       # CatBoost+XGBoost ensemble + SHAP (pkl models)
+│   ├── catboost_service.py    # Native CatBoost .cbm models — closure + priority
+│   ├── incident_service.py    # CRUD + DBSCAN + analytics SQL + scoring
 │   ├── advisory_service.py    # Gemini Flash advisory generation
+│   ├── command_center_service.py  # Command center KPI aggregation
+│   ├── priority_service.py    # Priority ranking for top incidents
+│   ├── severity_service.py    # Severity scoring logic
+│   ├── rules_engine.py        # Rule-based deployment recommendations
+│   ├── simulation_service.py  # Event congestion simulation
+│   ├── whatif_service.py      # What-if corridor closure analysis
+│   ├── explain_service.py     # SHAP explanation formatting
 │   ├── upload_service.py      # Cloudinary photo upload
 │   ├── arq_service.py         # ARQ pool + enqueue helper
 │   ├── auth_service.py        # Register, login, token rotation
-│   └── ...
+│   ├── demo_data_service.py   # 13-incident demo seed generator
+│   └── store.py               # Legacy in-memory store (predictions only)
 ├── routers/
-│   ├── api.py                 # All main endpoints
-│   ├── auth.py                # Auth endpoints
-│   ├── translate.py           # Translation endpoint
-│   ├── command_center.py      # Command center summary
-│   └── ...
-├── models/
-│   ├── catboost_model.pkl     # Trained CatBoost (76.2% acc, AUC 0.83)
-│   ├── xgb_model.pkl          # Trained XGBoost
+│   ├── api.py                 # Core endpoints (incidents, reports, heatmap, analytics)
+│   ├── auth.py                # /api/auth/* (login, register, refresh, logout, me)
+│   ├── admin.py               # /api/admin/* (users, roles)
+│   ├── websocket.py           # /ws real-time incident feed
+│   ├── ml_predict.py          # /api/ml-predict (CatBoost closure + priority)
+│   ├── explain.py             # /prediction/explain (SHAP breakdown)
+│   ├── simulate.py            # /simulate-event
+│   ├── whatif.py              # /what-if
+│   ├── command_center.py      # /command-center/summary
+│   ├── advisory.py            # /api/advisory/latest (Gemini)
+│   ├── translate.py           # /api/translate-batch
+│   ├── routing.py             # /api/route (OSRM safe route)
+│   ├── diversion.py           # /api/diversion/* (ASTRAM engine)
+│   └── demo.py                # /generate-demo-data
+├── ml_models/                 # Native CatBoost models (used by catboost_service)
+│   ├── closure_model.cbm      # Road closure classifier
+│   ├── closure_threshold.json
+│   ├── priority_model.cbm     # Priority label classifier
+│   ├── priority_threshold.json
+│   ├── closure_rate_map.json  # Historical closure rates by cause/zone
+│   ├── priority_rate_map.json
+│   ├── incident_count_map.json
+│   └── spatial_defaults.json
+├── models/                    # pkl models (used by model_service / predict endpoint)
+│   ├── catboost_model.pkl     # CatBoost (76.2% acc, AUC 0.83)
+│   ├── xgb_model.pkl          # XGBoost
 │   └── tfidf.pkl              # TF-IDF for text features
-└── scripts/
-    └── train_model.py         # Retrain script
+├── astram_routing/            # ASTRAM road-graph routing module
+│   ├── graph.py               # Road graph construction
+│   ├── incidents.py           # Incident-to-edge impact mapping
+│   └── router.py              # Route-scoring algorithm
+├── diversion_engine/          # Diversion planning engine
+│   ├── config/settings.py
+│   ├── models/schemas.py      # Request/response schemas
+│   ├── services/
+│   │   ├── diversion_planning_service.py
+│   │   ├── incident_impact_service.py
+│   │   ├── map_matching_service.py
+│   │   └── road_network_service.py
+│   └── utils/logger.py
+├── alembic/                   # Database migrations
+│   └── versions/
+├── scripts/
+│   └── train_model.py         # Retrain pkl models
+└── tests/
+    ├── conftest.py
+    ├── test_auth.py
+    └── test_incidents.py
 
 frontend/
 ├── app/
-│   ├── page.tsx               # Home (fully translated)
+│   ├── page.tsx               # Landing + role selection
 │   ├── citizen/
 │   │   ├── heatmap/page.tsx   # Live heatmap + hotspots
 │   │   ├── report/page.tsx    # Incident report form
-│   │   └── track/page.tsx     # Report tracking
+│   │   ├── track/page.tsx     # Report tracking
+│   │   └── route/page.tsx     # Safe route planner
 │   └── authority/
-│       ├── login/page.tsx     # Authority login (with LanguageSwitcher)
-│       ├── command-center/    # Executive dashboard
+│       ├── login/page.tsx     # JWT login with LanguageSwitcher
+│       ├── dashboard/         # KPIs + top-priority incidents
+│       ├── command-center/    # AI advisory + ops summary
+│       ├── predict/           # ML risk prediction + SHAP
 │       ├── analytics/         # Charts from real SQL
-│       └── ...
+│       ├── heatmap/           # Heatmap with admin overlays
+│       ├── resources/         # Deployment recommendations
+│       ├── verify/            # Approve / reject citizen reports
+│       ├── simulate/          # Event congestion simulation
+│       └── what-if/           # Corridor closure analysis
 ├── components/
-│   ├── PublicHeader.tsx        # Nav with LanguageSwitcher
-│   └── LanguageSwitcher.tsx    # EN/HI/KN dropdown
+│   ├── AuthorityShell.tsx     # Shared authority layout shell
+│   ├── PublicHeader.tsx       # Nav with LanguageSwitcher
+│   ├── LanguageSwitcher.tsx   # EN/HI/KN dropdown
+│   └── maps/                  # Map components
 ├── contexts/
-│   └── LanguageContext.tsx     # i18n state + static translations
+│   └── LanguageContext.tsx    # i18n state + static translations
 └── lib/
-    ├── api.ts                  # All API calls
-    └── translations.ts         # Static EN/HI/KN string map
+    ├── api.ts                 # All API calls
+    └── translations.ts        # Static EN/HI/KN string map
 ```
 
 ---
@@ -566,13 +621,141 @@ npm run dev
 ```
 DATABASE_URL=postgresql://user:pass@localhost:5432/namma_traffic
 JWT_SECRET_KEY=<openssl rand -hex 32>
-GEMINI_API_KEY=           # Gemini 1.5 Flash (free tier)
-SARVAM_API_KEY=           # Sarvam AI translation (optional)
-CLOUDINARY_CLOUD_NAME=    # Cloudinary (free 25 GB)
+
+# AI features (all optional — graceful fallbacks active when absent)
+GEMINI_API_KEY=                   # Gemini Flash advisory (free tier)
+SARVAM_API_KEY=                   # Sarvam AI Indian-language translation
+BHASHINI_INFERENCE_API_KEY=       # Bhashini / Dhruva inference key
+BHASHINI_UDYAT_API_KEY=
+BHASHINI_USER_ID=
+BHASHINI_PIPELINE_ID=
+
+# Storage
+CLOUDINARY_CLOUD_NAME=            # Cloudinary (free 25 GB)
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
-REDIS_URL=                # Upstash free tier (optional)
+
+# Caching / token blacklist
+REDIS_URL=                        # Upstash free tier, e.g. rediss://default:xxx@host:6379
 ```
+
+---
+
+---
+
+### Step 10 — CatBoost Authority ML Pipeline
+
+**Problem:** The existing `/api/predict` endpoint used pkl-serialized models with a custom feature engineering pipeline. A separate, purpose-built authority workflow needed its own endpoint with cleaner inputs and calibrated thresholds.
+
+**Solution:** A second CatBoost pipeline trained specifically for authority use — two separate classifiers, one for road-closure probability and one for incident priority label, both using the `.cbm` native CatBoost format with threshold calibration JSON files.
+
+**Files:**
+- `backend/services/catboost_service.py` — lazy-loading prediction function
+- `backend/routers/ml_predict.py` — `POST /api/ml-predict`
+- `backend/ml_models/` — `closure_model.cbm`, `priority_model.cbm`, threshold and rate-map JSON files
+
+**Model artifacts:**
+| File | Purpose |
+|------|---------|
+| `closure_model.cbm` | Binary closure classifier (calibrated threshold in `closure_threshold.json`) |
+| `priority_model.cbm` | Priority label classifier — Low / Medium / High |
+| `closure_rate_map.json` | Historical closure rates keyed by event_cause |
+| `priority_rate_map.json` | Historical priority rates keyed by event_cause |
+| `incident_count_map.json` | Incident volume by zone for spatial features |
+| `spatial_defaults.json` | Fallback lat/lon cluster centroids |
+
+**API endpoint:** `POST /api/ml-predict`
+```json
+{
+  "event_type": "planned",
+  "latitude": 12.97,
+  "longitude": 77.59,
+  "event_cause": "Concert",
+  "authenticated": true,
+  "veh_type": null,
+  "start_datetime": "2024-03-07 17:01:48+00",
+  "description": ""
+}
+```
+Returns `closure_probability`, `closure_prediction`, `priority_probability`, `priority_prediction`.
+
+---
+
+### Step 11 — Incident-Aware Safe Route (OSRM)
+
+**Problem:** Citizens and officers needed route suggestions that account for current road closures and high-severity incidents — not just shortest distance.
+
+**Solution:** Fetch up to 3 alternative routes from OSRM's public demo server, score each route by the severity of incidents within 500 m of any waypoint, hard-exclude routes with an active road closure in their corridor, and return the safest route alongside the rejected "dangerous" route so the frontend can show the comparison.
+
+**Files:**
+- `backend/routers/routing.py` — `POST /api/route`
+
+**Scoring logic:**
+```python
+# Each incident within 500 m of a waypoint contributes severity_score / distance_m
+# Road closures → route gets score = infinity → hard excluded
+incident_score = sum(severity / haversine_m(waypoint, incident) for matching)
+```
+
+**Graceful fallback:** If OSRM is unreachable the endpoint raises 503 with a clear error — it does not silently return a wrong route.
+
+---
+
+### Step 12 — What-If Corridor Closure Analysis
+
+**Problem:** Officers needed to model the downstream impact of closing a corridor before committing to it — without running a live incident.
+
+**Solution:** A pure analytics endpoint that takes a corridor name and closure duration, queries historical incident data for that corridor from the DB, and returns a risk projection: estimated cascading delay, affected zones, and recommended pre-emptive deployments.
+
+**Files:**
+- `backend/services/whatif_service.py` — `what_if_road_closure(corridor, hours)`
+- `backend/routers/whatif.py` — `POST /what-if`
+
+---
+
+### Step 13 — Event Congestion Simulation
+
+**Problem:** Planned events (concerts, marathons, political rallies) cause predictable but unplanned-for congestion spikes. Authorities had no way to pre-model impact before issuing advisories.
+
+**Solution:** Given an event type, zone, expected attendance, and duration, the simulation service generates a synthetic congestion forecast — peak delay estimate, affected radius, and a deployment recommendation — using the same feature space as the ML models but without requiring a real incident record.
+
+**Files:**
+- `backend/services/simulation_service.py` — `simulate_event(event_type, zone, attendance, duration_hours)`
+- `backend/routers/simulate.py` — `POST /simulate-event`
+
+---
+
+### Step 14 — SHAP Explainability Endpoint
+
+**Problem:** The predict page showed a risk score but officers couldn't see why the model gave that score — which made it hard to act on and hard to trust.
+
+**Solution:** A dedicated `/prediction/explain` endpoint that accepts the same input as `/api/predict` and returns the top SHAP feature contributions with direction (positive = pushes toward closure, negative = pulls away), formatted for direct display in the UI.
+
+**Files:**
+- `backend/services/explain_service.py` — explanation formatting
+- `backend/routers/explain.py` — `POST /prediction/explain`
+
+---
+
+### Step 15 — Diversion Planning Engine (ASTRAM)
+
+**Problem:** When a road closure is confirmed, traffic control needs a concrete diversion route, not just a flag. Manual route selection is slow and inconsistent.
+
+**Solution:** Integrated the ASTRAM diversion planning engine — a standalone routing module that builds a weighted road graph from OpenStreetMap data, maps incidents to affected edges, and runs a modified shortest-path search that avoids closure edges and penalizes high-severity segments.
+
+**Files:**
+- `backend/astram_routing/` — road graph, incident mapping, route-scoring algorithm
+- `backend/diversion_engine/` — full engine with services for diversion planning, incident impact, map matching, and road network
+- `backend/routers/diversion.py` — `POST /api/diversion/plan`, `GET /api/diversion/incidents`, `GET /api/diversion/status`
+
+**Integration approach:** The diversion router wires the engine to the existing PostgreSQL `Incident` ORM model and `get_db` dependency — it does not use the engine's own standalone DB session. The engine's services are called with our incident data; only the routing algorithm is from the engine.
+
+**Endpoints:**
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/diversion/plan` | Generate a diversion plan for an `incident_id` |
+| GET | `/api/diversion/incidents` | List active incidents with `road_status` field |
+| GET | `/api/diversion/status` | Engine health check |
 
 ---
 
@@ -583,14 +766,19 @@ The entire system is designed to degrade gracefully. With only a PostgreSQL data
 | Feature | No keys | With keys |
 |---------|---------|-----------|
 | Incident CRUD + WebSocket | Full | Full |
-| ML prediction (CatBoost+XGBoost) | Full | Full |
+| ML prediction (CatBoost + XGBoost) | Full | Full |
+| Authority ML predict (closure + priority) | Full | Full |
 | DBSCAN hotspot detection | Full | Full |
 | Real-time analytics | Full | Full |
+| Safe route planning (OSRM) | Full | Full |
+| What-if analysis | Full | Full |
+| Event simulation | Full | Full |
+| SHAP explainability | Full | Full |
+| Diversion planning | Full | Full |
 | Advisory generation | Rule-based template | Gemini natural language |
 | Photo upload | Skipped silently | Stored in Cloudinary |
-| Translation | Static bundled (instant) | Sarvam AI quality upgrade |
+| Translation | Static bundled (instant) | Sarvam AI / Bhashini quality upgrade |
 | Token blacklist on logout | Tokens expire naturally (15 min) | Immediate invalidation |
 | Background geocoding | Skipped | Address auto-enriched |
 | Hotspot caching | Live query every request | Redis cache (15 min TTL) |
 | Rate limiting | Active (no Redis needed) | Active |
-| Prometheus metrics | Active | Active |
