@@ -232,7 +232,7 @@ export default function ReportPage() {
           {/* Category grid */}
           <div className="space-y-3">
             <Divider label="Incident category" />
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {CATEGORIES.map(c => (
                 <button
                   key={c.cause}

@@ -62,7 +62,7 @@ export default function AnalyticsPage() {
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={data.top_causes} layout="vertical" margin={{ left: 8 }}>
               <XAxis type="number" tick={{ fontSize: 10 }} />
-              <YAxis type="category" dataKey="cause" tick={{ fontSize: 10 }} width={90} tickFormatter={(v: string) => v.replace(/_/g, " ")} />
+              <YAxis type="category" dataKey="cause" tick={{ fontSize: 10 }} width={68} tickFormatter={(v: string) => { const s = v.replace(/_/g, " "); return s.length > 9 ? s.slice(0, 8) + "…" : s }} />
               <Tooltip formatter={(v: number) => v.toLocaleString()} />
               <Bar dataKey="count" fill="#185FA5" radius={[0, 4, 4, 0]} />
             </BarChart>

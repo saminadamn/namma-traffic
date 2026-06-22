@@ -317,13 +317,13 @@ export default function RoutePage() {
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4 flex items-center gap-4">
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider mb-0.5">Route Advantage</p>
-                  <p className="text-2xl font-bold text-emerald-700">~{minsLow}–{minsHigh} min saved</p>
+                  <p className="text-xl sm:text-2xl font-bold text-emerald-700">~{minsLow}–{minsHigh} min saved</p>
                   <p className="text-xs text-emerald-600 mt-0.5">
                     vs. unoptimised route through {route.incidents_avoided.length} active incident{route.incidents_avoided.length > 1 ? "s" : ""}
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-2xl font-bold text-emerald-800">{routesEval}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-emerald-800">{routesEval}</p>
                   <p className="text-[10px] text-emerald-600">routes evaluated<br/>in real-time</p>
                 </div>
               </div>
