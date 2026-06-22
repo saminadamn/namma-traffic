@@ -24,6 +24,10 @@ frontend/.next/
 frontend/out/
 frontend/.env.local
 frontend/.env.production
+frontend/css.d.ts
+frontend/tsconfig.tsbuildinfo
+namma-traffic/frontend/css.d.ts
+namma-traffic/frontend/tsconfig.tsbuildinfo
 
 # ── OS / Editor ────────────────────────────────────────────────
 .DS_Store
