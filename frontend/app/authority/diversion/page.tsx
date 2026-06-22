@@ -38,7 +38,7 @@ export default function DiversionPage() {
   const [errors,    setErrors]    = useState<Record<string, string>>({})
 
   useEffect(() => {
-    getIncidents("status=active&limit=50")
+    getIncidents("status=active&limit=500")
       .then(setIncidents)
       .catch(() => {})
       .finally(() => setLoading(false))

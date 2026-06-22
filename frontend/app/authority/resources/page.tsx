@@ -1,6 +1,6 @@
 "use client"
 import React, { useEffect, useState, useCallback, useMemo } from "react"
-import { getIncidents, completeIncident, getDiversionPlan, resolveIncident, type Incident, type DiversionPlan } from "@/lib/api"
+import { getIncidents, completeIncident, getDiversionPlan, type Incident, type DiversionPlan } from "@/lib/api"
 
 function buildTokenMap(incidents: Incident[]): Record<string, string> {
   const sorted = [...incidents].sort(
@@ -9,17 +9,17 @@ function buildTokenMap(incidents: Incident[]): Record<string, string> {
   return Object.fromEntries(sorted.map((inc, i) => [inc.id, `I${i + 1}`]))
 }
 
-const PLAN: Record<string, { officers: number; barricades: number; radius: string }> = {
-  accident:          { officers: 4,  barricades: 3, radius: "1 km"   },
-  public_event:      { officers: 8,  barricades: 6, radius: "3 km"   },
-  water_logging:     { officers: 3,  barricades: 2, radius: "500 m"  },
-  vehicle_breakdown: { officers: 2,  barricades: 1, radius: "300 m"  },
-  tree_fall:         { officers: 3,  barricades: 2, radius: "500 m"  },
-  construction:      { officers: 5,  barricades: 4, radius: "1 km"   },
-  congestion:        { officers: 3,  barricades: 0, radius: "1 km"   },
-  pot_holes:         { officers: 2,  barricades: 2, radius: "200 m"  },
-  debris:            { officers: 2,  barricades: 2, radius: "300 m"  },
-  signal_failure:    { officers: 2,  barricades: 0, radius: "200 m"  },
+const PLAN: Record<string, { officers: number; barricades: number; radius: string; basis: string }> = {
+  accident:          { officers: 4,  barricades: 3, radius: "1 km",  basis: "Traffic diversion + crowd control + emergency vehicle clearance" },
+  public_event:      { officers: 8,  barricades: 6, radius: "3 km",  basis: "Perimeter management + multi-lane control + crowd flow"          },
+  water_logging:     { officers: 3,  barricades: 2, radius: "500 m", basis: "Hazard warning + emergency vehicle coordination"                 },
+  vehicle_breakdown: { officers: 2,  barricades: 1, radius: "300 m", basis: "Lane clearance + tow coordination"                              },
+  tree_fall:         { officers: 3,  barricades: 2, radius: "500 m", basis: "Road clearance + debris containment"                            },
+  construction:      { officers: 5,  barricades: 4, radius: "1 km",  basis: "Zone enforcement + alternate route management"                   },
+  congestion:        { officers: 3,  barricades: 0, radius: "1 km",  basis: "Signal override + manual flow optimisation"                      },
+  pot_holes:         { officers: 2,  barricades: 2, radius: "200 m", basis: "Hazard marking + repair team coordination"                       },
+  debris:            { officers: 2,  barricades: 2, radius: "300 m", basis: "Road clearing + lane restriction"                                },
+  signal_failure:    { officers: 2,  barricades: 0, radius: "200 m", basis: "Manual traffic control at junction"                              },
 }
 const planFor = (cause: string) => PLAN[cause] || { officers: 2, barricades: 1, radius: "—" }
 
@@ -58,7 +58,7 @@ export default function Resources() {
   const [divOpen,       setDivOpen]      = useState<string | null>(null)   // id whose panel is open
 
   const load = useCallback(() => {
-    getIncidents("status=active").then(setIncidents).catch(() => {})
+    getIncidents("status=active&limit=500").then(setIncidents).catch(() => {})
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -184,7 +184,7 @@ export default function Resources() {
           <table className="w-full text-xs min-w-[600px]">
             <thead>
               <tr className="text-left text-gray-400 border-b border-gray-100">
-                <th className="py-2 font-medium pl-3 sm:pl-0">Incident</th>
+                <th className="py-2 font-medium pl-3 sm:pl-0">Incident · Allocation basis</th>
                 <th className="py-2 font-medium">Location</th>
                 <th className="py-2 font-medium text-center">Officers</th>
                 <th className="py-2 font-medium text-center">Barricades</th>
@@ -229,6 +229,12 @@ export default function Resources() {
                             }`}>{inc.priority}</span>
                           )}
                         </div>
+                        <p className="text-[10px] text-gray-400 mt-0.5 max-w-[160px] leading-snug">{p.basis}</p>
+                        {inc.closure_probability != null && (inc.closure_probability as number) > 0.55 && (
+                          <p className="text-[10px] text-amber-600 font-medium">
+                            {Math.round((inc.closure_probability as number) * 100)}% closure risk
+                          </p>
+                        )}
                       </td>
                       <td className="py-2.5 text-gray-500 max-w-[160px] truncate">{inc.address}</td>
                       <td className="py-2.5 text-center font-medium">{p.officers}</td>
