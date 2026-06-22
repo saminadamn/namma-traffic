@@ -217,12 +217,11 @@ export default function Dashboard() {
 
       {/* Quantified impact footer */}
       {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
           {[
-            { label: "Incidents logged",      value: String(stats.total ?? 0),                             sub: "since deployment"         },
-            { label: "Road closures managed", value: String(stats.road_closures ?? 0),                  sub: "requiring diversion"      },
-            { label: "Commuters warned",      value: `~${((stats.active ?? 0) * 350).toLocaleString()}`, sub: "via live advisories"     },
-            { label: "Model accuracy",        value: "99.2%",                                            sub: "CatBoost · validated"    },
+            { label: "Incidents logged",      value: String(stats.total ?? 0),                            sub: "since deployment"    },
+            { label: "Road closures managed", value: String(stats.road_closures ?? 0),                   sub: "requiring diversion" },
+            { label: "Commuters warned",      value: `~${((stats.active ?? 0) * 350).toLocaleString()}`, sub: "via live advisories" },
           ].map(({ label, value, sub }) => (
             <div key={label} className="gov-card p-3 text-center">
               <p className="text-[10px] text-gray-400 mb-0.5">{label}</p>
