@@ -287,12 +287,12 @@ export default function ReportsQueuePage() {
                         disabled={!!verifying}
                         className="w-full text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
                       >
-                        {isActioning ? "…" : "Verify"}
+                        {isActioning ? "…" : "✓ Approve"}
                       </button>
                       <button
                         onClick={() => act(r, "reject")}
                         disabled={!!verifying}
-                        className="w-full text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                        className="w-full text-[11px] font-semibold px-3 py-1.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
                       >
                         {isActioning ? "…" : "Reject"}
                       </button>

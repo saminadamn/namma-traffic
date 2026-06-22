@@ -280,7 +280,7 @@ export default function ReportPage() {
 
           {/* Vehicle type */}
           <div className="space-y-3">
-            <Divider label="Vehicle involved (optional — improves ML accuracy)" />
+            <Divider label="Vehicle involved (optional)" />
             <div className="flex flex-wrap gap-1.5">
               {VEH_TYPES.map(({ label, value }) => (
                 <button
