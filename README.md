@@ -156,6 +156,6 @@ Open **http://localhost:3000**
 <div align="center">
 
 **Namma Traffic** · Smarter Roads. Safer Journeys.  
-BIT Mesra · Smart India Hackathon 2024
+BIT Mesra
 
 </div>
