@@ -1,24 +1,32 @@
 "use client"
-import React, { useEffect, useState, useCallback } from "react"
-import { getIncidents, completeIncident, getDiversionPlan, resolveIncident, type Incident, type DiversionPlan } from "@/lib/api"
+import React, { useEffect, useState, useCallback, useMemo } from "react"
+import { getIncidents, completeIncident, getDiversionPlan, type Incident, type DiversionPlan } from "@/lib/api"
 
-const PLAN: Record<string, { officers: number; barricades: number; radius: string }> = {
-  accident:          { officers: 4,  barricades: 3, radius: "1 km"   },
-  public_event:      { officers: 8,  barricades: 6, radius: "3 km"   },
-  water_logging:     { officers: 3,  barricades: 2, radius: "500 m"  },
-  vehicle_breakdown: { officers: 2,  barricades: 1, radius: "300 m"  },
-  tree_fall:         { officers: 3,  barricades: 2, radius: "500 m"  },
-  construction:      { officers: 5,  barricades: 4, radius: "1 km"   },
-  congestion:        { officers: 3,  barricades: 0, radius: "1 km"   },
-  pot_holes:         { officers: 2,  barricades: 2, radius: "200 m"  },
-  debris:            { officers: 2,  barricades: 2, radius: "300 m"  },
-  signal_failure:    { officers: 2,  barricades: 0, radius: "200 m"  },
+function buildTokenMap(incidents: Incident[]): Record<string, string> {
+  const sorted = [...incidents].sort(
+    (a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime()
+  )
+  return Object.fromEntries(sorted.map((inc, i) => [inc.id, `I${i + 1}`]))
+}
+
+const PLAN: Record<string, { officers: number; barricades: number; radius: string; basis: string }> = {
+  accident:          { officers: 4,  barricades: 3, radius: "1 km",  basis: "Traffic diversion + crowd control + emergency vehicle clearance" },
+  public_event:      { officers: 8,  barricades: 6, radius: "3 km",  basis: "Perimeter management + multi-lane control + crowd flow" },
+  water_logging:     { officers: 3,  barricades: 2, radius: "500 m", basis: "Hazard warning + emergency vehicle coordination" },
+  vehicle_breakdown: { officers: 2,  barricades: 1, radius: "300 m", basis: "Lane clearance + tow coordination" },
+  tree_fall:         { officers: 3,  barricades: 2, radius: "500 m", basis: "Road clearance + debris containment" },
+  construction:      { officers: 5,  barricades: 4, radius: "1 km",  basis: "Zone enforcement + alternate route management" },
+  congestion:        { officers: 3,  barricades: 0, radius: "1 km",  basis: "Signal override + manual flow optimisation" },
+  pot_holes:         { officers: 2,  barricades: 2, radius: "200 m", basis: "Hazard marking + repair team coordination" },
+  debris:            { officers: 2,  barricades: 2, radius: "300 m", basis: "Road clearing + lane restriction" },
+  signal_failure:    { officers: 2,  barricades: 0, radius: "200 m", basis: "Manual traffic control at junction" },
 }
 const planFor = (cause: string) => PLAN[cause] || { officers: 2, barricades: 1, radius: "—" }
 
 interface ReleaseLog {
-  key: string   // unique per entry: id + release timestamp
+  key: string
   id: string
+  token: string
   address: string
   officers: number
   barricades: number
@@ -50,10 +58,12 @@ export default function Resources() {
   const [divOpen,       setDivOpen]      = useState<string | null>(null)   // id whose panel is open
 
   const load = useCallback(() => {
-    getIncidents("status=active").then(setIncidents).catch(() => {})
+    getIncidents("status=active&limit=500").then(setIncidents).catch(() => {})
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  const tokenMap = useMemo(() => buildTokenMap(incidents), [incidents])
 
   const totals = incidents.reduce((acc, inc) => {
     const p = planFor(inc.event_cause)
@@ -76,6 +86,7 @@ export default function Resources() {
       setReleased(prev => [{
         key: `${inc.id}-${Date.now()}`,
         id: inc.id,
+        token: tokenMap[inc.id] ?? "?",
         address: inc.address,
         officers: p.officers,
         barricades: p.barricades,
@@ -155,6 +166,7 @@ export default function Resources() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                 </svg>
                 <span className="text-gray-400">{r.at}</span>
+                <span className="text-[10px] font-bold text-gov-600 font-mono">{r.token}</span>
                 <span className="truncate flex-1">{r.address}</span>
                 <span className="text-emerald-700 font-medium whitespace-nowrap">
                   +{r.officers} officers · +{r.barricades} barricades freed
@@ -172,7 +184,7 @@ export default function Resources() {
           <table className="w-full text-xs min-w-[600px]">
             <thead>
               <tr className="text-left text-gray-400 border-b border-gray-100">
-                <th className="py-2 font-medium pl-3 sm:pl-0">Incident</th>
+                <th className="py-2 font-medium pl-3 sm:pl-0">Incident · Allocation basis</th>
                 <th className="py-2 font-medium">Location</th>
                 <th className="py-2 font-medium text-center">Officers</th>
                 <th className="py-2 font-medium text-center">Barricades</th>
@@ -189,21 +201,35 @@ export default function Resources() {
                 const isPlanOpen     = divOpen      === inc.id
                 const plan           = divPlans[inc.id]
                 const planErr        = divErrors[inc.id]
+                const token          = tokenMap[inc.id] ?? "?"
 
                 return (
                   <React.Fragment key={inc.id}>
-                    <tr
-                      className={`border-b ${isPlanOpen ? "border-gov-100" : "border-gray-50"} last:border-0 transition-colors ${isConfirming ? "bg-amber-50" : ""}`}
-                    >
+                    <tr className={`border-b ${isPlanOpen ? "border-gov-100" : "border-gray-50"} last:border-0 transition-colors ${isConfirming ? "bg-amber-50" : ""}`}>
                       <td className="py-2.5 pl-3 sm:pl-0">
-                        <span className="text-gray-800 capitalize">{inc.event_cause?.replace(/_/g, " ")}</span>
-                        {inc.severity_label && (
-                          <span className={`ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
-                            inc.severity_label === "Critical" ? "bg-red-100 text-red-700" :
-                            inc.severity_label === "High"     ? "bg-orange-100 text-orange-700" :
-                            inc.severity_label === "Medium"   ? "bg-amber-100 text-amber-700" :
-                                                                "bg-gray-100 text-gray-500"
-                          }`}>{inc.severity_label}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-bold text-gov-700 bg-gov-50 border border-gov-200 px-1.5 py-0.5 rounded font-mono flex-shrink-0">
+                            {token}
+                          </span>
+                          <span className="text-gray-800 capitalize">{inc.event_cause?.replace(/_/g, " ")}</span>
+                          {inc.severity_label ? (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
+                              inc.severity_label === "Critical" ? "bg-red-100 text-red-700" :
+                              inc.severity_label === "High"     ? "bg-orange-100 text-orange-700" :
+                              inc.severity_label === "Medium"   ? "bg-amber-100 text-amber-700" :
+                                                                  "bg-emerald-100 text-emerald-700"
+                            }`}>{inc.severity_label}</span>
+                          ) : (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
+                              inc.priority === "High" ? "bg-orange-100 text-orange-700" : "bg-gray-100 text-gray-500"
+                            }`}>{inc.priority}</span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-0.5 max-w-[160px] leading-snug">{p.basis}</p>
+                        {inc.closure_probability != null && (inc.closure_probability as number) > 0.55 && (
+                          <p className="text-[10px] text-amber-600 font-medium">
+                            {Math.round((inc.closure_probability as number) * 100)}% closure risk
+                          </p>
                         )}
                       </td>
                       <td className="py-2.5 text-gray-500 max-w-[160px] truncate">{inc.address}</td>
@@ -212,7 +238,6 @@ export default function Resources() {
                       <td className="py-2.5 text-center text-gray-500">{p.radius}</td>
                       <td className="py-2.5 text-right pr-3 sm:pr-0">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* Diversion plan button */}
                           <button
                             onClick={() => handleGetDiversionPlan(inc)}
                             disabled={isPlanning}
@@ -222,35 +247,25 @@ export default function Resources() {
                                 : "border-gray-200 text-gray-500 hover:border-gov-300 hover:text-gov-600 hover:bg-gov-50"
                             }`}
                           >
-                            {isPlanning ? (
-                              <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
-                              </svg>
-                            )}
+                            {isPlanning
+                              ? <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" />
+                              : <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
+                                </svg>
+                            }
                             {isPlanOpen ? "Hide plan" : "Diversion plan"}
                           </button>
-
-                          {/* End event button */}
                           {isResolving ? (
                             <span className="inline-flex items-center gap-1 text-[10px] text-gray-400">
                               <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" />
                             </span>
                           ) : isConfirming ? (
                             <span className="inline-flex items-center gap-1">
-                              <button onClick={() => handleResolve(inc)} className="text-[10px] px-2 py-1 rounded-md bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">
-                                Confirm
-                              </button>
-                              <button onClick={() => cancelConfirm(inc.id)} className="text-[10px] px-2 py-1 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">
-                                Cancel
-                              </button>
+                              <button onClick={() => handleResolve(inc)} className="text-[10px] px-2 py-1 rounded-md bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">Confirm</button>
+                              <button onClick={() => cancelConfirm(inc.id)} className="text-[10px] px-2 py-1 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">Cancel</button>
                             </span>
                           ) : (
-                            <button
-                              onClick={() => handleResolve(inc)}
-                              className="inline-flex items-center gap-1 text-[10px] px-2 py-1.5 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-colors font-medium"
-                            >
+                            <button onClick={() => handleResolve(inc)} className="inline-flex items-center gap-1 text-[10px] px-2 py-1.5 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-colors font-medium">
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                               </svg>
