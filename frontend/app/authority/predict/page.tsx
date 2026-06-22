@@ -302,7 +302,7 @@ function PredictTab() {
                 </div>
               </div>
               <div className="gov-card p-4">
-                <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-3">ML Confidence · CatBoost</p>
+                <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 mb-3">Model Confidence</p>
                 <div className="space-y-3">
                   <div>
                     <div className="flex justify-between text-[11px] mb-1">

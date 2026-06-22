@@ -8,9 +8,10 @@ const CAUSES = ["All", "vehicle_breakdown", "water_logging", "tree_fall", "accid
 interface Props {
   height?: number
   onHotspotsChange?: (spots: Hotspot[]) => void
+  focusPoint?: { lat: number; lon: number } | null
 }
 
-export default function TrafficMap({ height = 480, onHotspotsChange }: Props) {
+export default function TrafficMap({ height = 480, onHotspotsChange, focusPoint }: Props) {
   const mapRef    = useRef<any>(null)
   const layerRef  = useRef<any>(null)
   const wsRef     = useRef<WebSocket | null>(null)
@@ -25,6 +26,12 @@ export default function TrafficMap({ height = 480, onHotspotsChange }: Props) {
   const [pulse,       setPulse]       = useState(false)
 
   useEffect(() => { setMounted(true) }, [])
+
+  // Fly to a hotspot when clicked from outside
+  useEffect(() => {
+    if (!mapRef.current || !focusPoint) return
+    mapRef.current.flyTo([focusPoint.lat, focusPoint.lon], 15, { animate: true, duration: 0.8 })
+  }, [focusPoint])
 
   // Keep causeRef in sync so WebSocket refresh callback never has stale closure
   useEffect(() => { causeRef.current = cause }, [cause])

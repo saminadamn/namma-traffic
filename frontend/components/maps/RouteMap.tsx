@@ -88,7 +88,12 @@ export default function RouteMap({ originLat, originLon, destLat, destLon, route
       icon: L.divIcon({ className: "", html: pinSvg("B", "#E24B4A", "#C0392B"), iconSize: [28, 36], iconAnchor: [14, 36] }),
     }).bindPopup("<b>Destination</b>"))
 
-    if (!route) {
+    // ── Faint straight-line preview (always shown as a baseline) ─────────
+    add(L.polyline([[originLat, originLon], [destLat, destLon]], {
+      color: "#CBD5E1", weight: 2, opacity: 0.55, dashArray: "6 8",
+    }))
+
+    if (!route || route.path_coords.length < 2) {
       const b = L.latLngBounds([[originLat, originLon], [destLat, destLon]])
       if (b.isValid()) map.fitBounds(b, { padding: [70, 70] })
       return
