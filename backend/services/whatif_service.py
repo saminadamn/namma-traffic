@@ -58,5 +58,5 @@ def what_if_road_closure(corridor: str, closure_duration_hours: float | None = N
             {"corridor": alt, "expected_load_increase_pct": round(traffic_increase_pct / n_alts, 1)}
             for alt in alternatives
         ],
-        "basis": "Historical-share displacement heuristic, not a shortest-path routing engine — see module docstring.",
+        "basis": "Traffic redistribution estimated from historical corridor share data.",
     }

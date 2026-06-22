@@ -16,9 +16,12 @@ from services import store, incident_service, upload_service, catboost_service, 
 from core.database import get_db
 from core.rbac import get_optional_user
 from routers.websocket import manager
+from core.redis_client import cache_delete
 from datetime import datetime
 import uuid, httpx, logging
 from config import get_settings
+
+_HOTSPOT_CACHE_KEY = "hotspots:cached"
 
 logger = logging.getLogger("namma_traffic")
 
@@ -113,18 +116,66 @@ def corridor_risk(db=Depends(get_db)):
     """Active incident severity aggregated by corridor — powers dashboard risk bars."""
     return incident_service.corridor_risk(db)
 
+@incidents_router.get("/allocation")
+def resource_allocation(db=Depends(get_db)):
+    """ML-driven officer and barricade allocation per active incident.
+    Uses closure_probability (CatBoost) + event_cause minimums from the
+    rules engine — same formula as rules_engine.py but applied to stored incidents."""
+    from db_models.incident import Incident
+    from services.rules_engine import MIN_OFFICERS
+
+    incidents = (
+        db.query(Incident)
+        .filter(Incident.status == "active")
+        .order_by(Incident.created_at.desc())
+        .all()
+    )
+
+    from services import severity_service
+    result = []
+    for inc in incidents:
+        cp   = inc.closure_probability or 0.0
+        ml_base = max(2, int(cp * 20))
+        sev_label = (
+            severity_service.label_for_score(inc.severity_score)
+            if inc.severity_score is not None
+            else inc.priority  # fallback to binary priority
+        )
+        sev_bonus = {"Critical": 6, "High": 4, "Medium": 2, "Low": 0}.get(sev_label, 0)
+        ml_base += sev_bonus
+        officers   = max(MIN_OFFICERS.get(inc.event_cause or "", 2), ml_base)
+        barricades = max(1, int(cp * 15))
+
+        result.append({
+            "incident_id":         str(inc.id),
+            "address":             inc.address,
+            "zone":                inc.zone,
+            "event_cause":         inc.event_cause,
+            "priority":            inc.priority,
+            "severity_label":      sev_label,
+            "closure_probability": round(cp, 3),
+            "officers_needed":     officers,
+            "barricades_needed":   barricades,
+            "diversion_required":  cp > 0.45 or inc.requires_road_closure,
+        })
+
+    result.sort(key=lambda x: x["officers_needed"], reverse=True)
+    return result
+
 
 @incidents_router.patch("/{incident_id}/complete")
-def complete_incident(incident_id: str, db=Depends(get_db)):
+async def complete_incident(incident_id: str, db=Depends(get_db)):
     """Authority ends an event — status → 'completed', releases all held resources."""
     from fastapi import HTTPException
     result = incident_service.complete_incident(db, incident_id)
     if result is None:
         raise HTTPException(status_code=404, detail="Incident not found")
+    await manager.broadcast_all("resources_updated", {"incident_id": incident_id, "status": "completed"})
+    await cache_delete(_HOTSPOT_CACHE_KEY)
     return result
 
 @incidents_router.patch("/{incident_id}/resolve")
-def resolve_incident(incident_id: str, db=Depends(get_db)):
+async def resolve_incident(incident_id: str, db=Depends(get_db)):
     """Mark an incident as resolved — releases its officers and barricades
     from the resource allocation count. Called by the Resources page when
     an officer confirms the event is over."""
@@ -132,12 +183,15 @@ def resolve_incident(incident_id: str, db=Depends(get_db)):
     result = incident_service.resolve_incident(db, incident_id)
     if result is None:
         raise HTTPException(status_code=404, detail="Incident not found")
+    await manager.broadcast_all("resources_updated", {"incident_id": incident_id, "status": "resolved"})
+    await cache_delete(_HOTSPOT_CACHE_KEY)
     return result
 
 @incidents_router.post("")
 async def create_incident(inc: IncidentCreate, db=Depends(get_db)):
     incident_dict, was_new = incident_service.create_incident(db, inc.model_dump())
     await manager.broadcast("incident_created" if was_new else "incident_confirmed", incident_dict)
+    await cache_delete(_HOTSPOT_CACHE_KEY)
     return incident_dict
 
 # ── Reports ────────────────────────────────────────────────────  [MODIFIED — Priority 2]
@@ -176,6 +230,7 @@ async def create_report(
         )
         if incident_dict:
             await manager.broadcast("incident_created", incident_dict)
+            await cache_delete(_HOTSPOT_CACHE_KEY)
     else:
         from services.arq_service import enqueue
         await enqueue("geocode_report", report_dict["id"])
@@ -193,6 +248,7 @@ async def verify(action: VerifyAction, db=Depends(get_db)):
         raise _HTTPException(status_code=500, detail=str(exc))
     if incident_dict:
         await manager.broadcast("incident_created", incident_dict)
+        await cache_delete(_HOTSPOT_CACHE_KEY)
     return {"message": f"Report {incident_service.ACTION_PAST_TENSE.get(action.action, action.action)}"}
 
 # ── Heatmap ────────────────────────────────────────────────────

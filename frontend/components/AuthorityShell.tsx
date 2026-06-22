@@ -15,12 +15,13 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const NAV = [
-    { href: "/authority/dashboard",      label: t("nav_dashboard"),       icon: "▦" },
-    { href: "/authority/predict",        label: t("nav_analysis"),        icon: "◈" },
-    { href: "/authority/heatmap",        label: t("nav_heatmap_auth"),    icon: "◉" },
-    { href: "/authority/resources",      label: t("nav_resources"),       icon: "◐" },
-    { href: "/authority/verify",         label: t("nav_verify"),          icon: "◫" },
-    { href: "/authority/analytics",      label: t("nav_analytics"),       icon: "▤" },
+    { href: "/authority/dashboard",  label: t("nav_dashboard"),        icon: "▦" },
+    { href: "/authority/verify",     label: t("nav_verify"),           icon: "◫" },
+    { href: "/authority/resources",  label: t("nav_resources"),        icon: "◐" },
+    { href: "/authority/diversion",  label: t("nav_diversion"),        icon: "↔" },
+    { href: "/authority/predict",    label: t("nav_predict_demo"),     icon: "◈" },
+    { href: "/authority/heatmap",    label: t("nav_heatmap_auth"),     icon: "◉" },
+    { href: "/authority/analytics",  label: t("nav_analytics_month"),  icon: "▤" },
   ]
 
   useEffect(() => {
@@ -43,7 +44,7 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
     localStorage.removeItem("namma_token")
     localStorage.removeItem("namma_refresh")
     localStorage.removeItem("namma_role")
-    router.push("/authority/login")
+    router.push("/")
   }
 
   if (!authChecked) {
@@ -60,8 +61,8 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
 
   const Sidebar = () => (
     <aside className="w-52 bg-white border-r border-gray-200 flex flex-col h-full">
-      <div className="h-16 flex items-center gap-2.5 px-4 border-b border-gray-200">
-        <img src="/assets/logo.png" alt="Namma AI" className="h-9 w-auto object-contain" />
+      <div className="h-20 flex items-center gap-2.5 px-4 border-b border-gray-200">
+        <img src="/assets/logo.png" alt="Namma AI" className="h-16 w-auto object-contain" />
       </div>
       <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
         {NAV.map(({ href, label, icon }) => (
@@ -130,7 +131,7 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <img src="/assets/logo.png" alt="Namma AI" className="h-7 w-auto object-contain" />
+          <img src="/assets/logo.png" alt="Namma AI" className="h-10 w-auto object-contain" />
           <div className="flex-1" />
           <button
             onClick={logout}

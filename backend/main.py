@@ -41,29 +41,33 @@ async def _migrate():
 
 async def _ensure_schema():
     """Guarantee critical columns exist regardless of Alembic migration state.
-    Runs every startup — all statements use IF NOT EXISTS so they are no-ops
-    when the column already exists."""
-    try:
-        from core.database import SessionLocal
-        from sqlalchemy import text
-        cols = [
-            "ALTER TABLE incidents ADD COLUMN IF NOT EXISTS road_status  VARCHAR(32)",
-            "ALTER TABLE incidents ADD COLUMN IF NOT EXISTS affected_road TEXT",
-            "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS authenticated BOOLEAN NOT NULL DEFAULT FALSE",
-            "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS veh_type VARCHAR(50)",
-            "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS incident_type VARCHAR(20) DEFAULT 'unplanned'",
-            "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS closure_probability FLOAT",
-            "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS priority_probability FLOAT",
-            "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS risk_score SMALLINT",
-            "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS risk_band VARCHAR(20)",
-        ]
-        with SessionLocal() as db:
-            for stmt in cols:
-                db.execute(text(stmt))
-            db.commit()
-        logger.info("Schema columns verified")
-    except Exception as exc:
-        logger.warning("Schema ensure skipped: %s", exc)
+    Uses engine autocommit + per-statement try/except so one missing table
+    never silently blocks the rest of the columns from being added."""
+    from core.database import engine
+    from sqlalchemy import text
+    stmts = [
+        "ALTER TABLE incidents ADD COLUMN IF NOT EXISTS road_status          VARCHAR(32)",
+        "ALTER TABLE incidents ADD COLUMN IF NOT EXISTS affected_road         TEXT",
+        "ALTER TABLE incidents ADD COLUMN IF NOT EXISTS severity_score        SMALLINT",
+        "ALTER TABLE incidents ADD COLUMN IF NOT EXISTS closure_probability   FLOAT",
+        "ALTER TABLE incidents ADD COLUMN IF NOT EXISTS priority_probability  FLOAT",
+        "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS authenticated    BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS veh_type         VARCHAR(50)",
+        "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS incident_type    VARCHAR(20) DEFAULT 'unplanned'",
+        "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS closure_probability FLOAT",
+        "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS priority_probability FLOAT",
+        "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS risk_score       SMALLINT",
+        "ALTER TABLE citizen_reports ADD COLUMN IF NOT EXISTS risk_band        VARCHAR(20)",
+    ]
+    ok = 0
+    with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+        for stmt in stmts:
+            try:
+                conn.execute(text(stmt))
+                ok += 1
+            except Exception as exc:
+                logger.warning("Schema patch skipped [%s]: %s", stmt[27:55], exc)
+    logger.info("Schema ensured (%d/%d statements applied)", ok, len(stmts))
 
 
 async def _score_pending():
@@ -80,11 +84,21 @@ async def _score_pending():
         logger.warning("Startup scoring skipped: %s", exc)
 
 
+async def _flush_hotspot_cache():
+    """Delete the hotspot Redis cache on startup so stale entries never survive a deploy."""
+    try:
+        from core.redis_client import cache_delete
+        await cache_delete("hotspots:cached")
+    except Exception:
+        pass
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    asyncio.create_task(_migrate())       # non-blocking: server starts immediately
-    asyncio.create_task(_ensure_schema()) # guarantee columns exist regardless of migration state
-    asyncio.create_task(_score_pending()) # score unscored pending reports
+    asyncio.create_task(_migrate())            # non-blocking: server starts immediately
+    await _ensure_schema()                     # BLOCKING: columns must exist before first request
+    asyncio.create_task(_score_pending())      # score unscored pending reports
+    asyncio.create_task(_flush_hotspot_cache()) # evict stale hotspot cache on every deploy
     app.state.model_service = model_service
     logger.info("Namma Traffic API started (models load on first predict)")
     yield
@@ -97,11 +111,11 @@ app = FastAPI(title="Namma Traffic API", version="1.0.0", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Always-allowed origins — production Vercel deployment + local dev.
-# FRONTEND_URL and EXTRA_ORIGINS env vars add on top of this list so
-# the Render env-var config cannot accidentally remove these entries.
+# Allow production Vercel URL, all Vercel preview URLs, and local dev.
+# allow_origin_regex covers namma-traffic-*.vercel.app preview deployments.
 _KNOWN_ORIGINS = [
     "https://namma-traffic-virid.vercel.app",
+    "https://namma-traffic.onrender.com",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
@@ -113,6 +127,7 @@ _all_origins = list(dict.fromkeys(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_all_origins,
+    allow_origin_regex=r"https://namma-traffic.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

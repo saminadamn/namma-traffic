@@ -57,15 +57,15 @@ class DiversionPlanningService:
 
         graph = self._rns.build_local_graph(incident.latitude, incident.longitude)
 
-        recommended_diversions: List[DiversionRoad] = []
-        if diversion_required:
-            recommended_diversions = self.find_diversion_roads(
-                graph=graph,
-                incident=incident,
-                affected_road_name=affected_road_info.road_name,
-                road_status=road_status,
-                severity=severity,
-            )
+        # Always search for alternatives — useful even in monitor-only cases
+        # so operators can see available roads before a situation escalates.
+        recommended_diversions = self.find_diversion_roads(
+            graph=graph,
+            incident=incident,
+            affected_road_name=affected_road_info.road_name,
+            road_status=road_status,
+            severity=severity,
+        )
 
         # Persist computed fields back via optional callback
         if self._persist:
@@ -97,18 +97,22 @@ class DiversionPlanningService:
             graph, incident.latitude, incident.longitude
         )
         connected  = self._rns.get_connected_roads(graph, node_id, max_hops=2)
+        affected_lower = affected_road_name.lower()
         candidates = [
             r for r in connected
-            if r["road_name"].lower() != affected_road_name.lower()
-            and r["road_name"] != "Unnamed Road"
+            if r["road_name"] != "Unnamed Road"
+            and r["road_name"].lower() != affected_lower
         ]
         if not candidates:
-            nearby     = self._rns.get_nearby_roads(graph, incident.latitude, incident.longitude, max_results=10)
+            nearby     = self._rns.get_nearby_roads(graph, incident.latitude, incident.longitude, max_results=15)
             candidates = [
                 r for r in nearby
-                if r["road_name"].lower() != affected_road_name.lower()
-                and r["road_name"] != "Unnamed Road"
+                if r["road_name"] != "Unnamed Road"
+                and r["road_name"].lower() != affected_lower
             ]
+        # Last resort: include unnamed roads if nothing else found
+        if not candidates:
+            candidates = [r for r in connected if r["road_name"].lower() != affected_lower]
         ranked = self.rank_diversion_options(candidates, incident.latitude, incident.longitude, severity)
         return ranked[: settings.max_diversion_roads]
 

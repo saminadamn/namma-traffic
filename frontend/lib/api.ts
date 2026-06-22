@@ -46,6 +46,7 @@ export const getIncidentStats = ()               => api<IncidentStats>("/api/inc
 export const getReports       = (s?: string)     => api<Report[]>(`/api/reports${s ? "?status=" + s : ""}`)
 export const getPendingReports = ()              => api<Report[]>("/api/reports?status=pending")
 export const getCorridorRisk  = ()               => api<CorridorRisk[]>("/api/incidents/corridor-risk")
+export const getAllocation    = ()               => api<AllocationItem[]>("/api/incidents/allocation")
 export const verifyReport     = (b: object)      => api("/api/reports/verify", { method: "PATCH", body: JSON.stringify(b) })
 export const submitReport     = async (f: FormData) => {
   const token = typeof window !== "undefined" ? localStorage.getItem("namma_token") : null
@@ -135,6 +136,18 @@ export interface Report {
 }
 
 export interface CorridorRisk { name: string; risk: number; count: number }
+export interface AllocationItem {
+  incident_id: string
+  address: string
+  zone: string | null
+  event_cause: string | null
+  priority: string
+  severity_label: string | null
+  closure_probability: number
+  officers_needed: number
+  barricades_needed: number
+  diversion_required: boolean
+}
 export interface HeatmapData { points: [number, number, number][]; total: number }
 export interface Hotspot { junction: string; count: number; lat: number; lon: number; dominant_cause: string }
 export interface Analytics {

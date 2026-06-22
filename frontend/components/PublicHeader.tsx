@@ -24,7 +24,7 @@ export default function PublicHeader() {
     localStorage.removeItem("namma_refresh")
     localStorage.removeItem("namma_role")
     setIsPersonnel(false)
-    router.push("/traffic/login")
+    router.push("/")
   }
 
   const logoutCitizen = () => {
@@ -70,10 +70,10 @@ export default function PublicHeader() {
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-4 flex items-center justify-between h-14">
+      <div className="max-w-6xl mx-auto px-4 flex items-center justify-between h-16">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 flex-shrink-0" onClick={() => setOpen(false)}>
-          <img src="/assets/logo.png" alt="Namma AI" className="h-14 sm:h-10 w-auto object-contain" />
+          <img src="/assets/logo.png" alt="Namma AI" className="h-14 sm:h-12 w-auto object-contain" />
         </Link>
 
         {/* Desktop nav */}
