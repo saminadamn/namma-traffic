@@ -3,48 +3,11 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import PublicHeader from "@/components/PublicHeader"
 import { useLanguage } from "@/contexts/LanguageContext"
-import { getIncidentStats } from "@/lib/api"
-
-function useCountUp(to: number, duration: number, enabled: boolean) {
-  const [val, setVal] = useState(0)
-  useEffect(() => {
-    if (!enabled) return
-    let start: number | null = null
-    const tick = (ts: number) => {
-      if (!start) start = ts
-      const p = Math.min((ts - start) / duration, 1)
-      setVal(Math.round(Math.sqrt(p) * to))
-      if (p < 1) requestAnimationFrame(tick)
-    }
-    const id = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(id)
-  }, [to, duration, enabled])
-  return val
-}
-
-function useCountDown(from: number, to: number, duration: number, enabled: boolean) {
-  const [val, setVal] = useState(from)
-  useEffect(() => {
-    if (!enabled) return
-    let start: number | null = null
-    const tick = (ts: number) => {
-      if (!start) start = ts
-      const p = Math.min((ts - start) / duration, 1)
-      setVal(Math.round(from - Math.sqrt(p) * (from - to)))
-      if (p < 1) requestAnimationFrame(tick)
-    }
-    const id = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(id)
-  }, [from, to, duration, enabled])
-  return val
-}
 
 export default function Home() {
   const { t } = useLanguage()
-  const [faqOpen,        setFaqOpen]        = useState<number | null>(null)
-  const [statsReady,     setStatsReady]     = useState(false)
-  const [userRole,       setUserRole]       = useState<string | null>(null)
-  const [incidentCount,  setIncidentCount]  = useState<number | null>(null)
+  const [faqOpen,   setFaqOpen]   = useState<number | null>(null)
+  const [userRole,  setUserRole]  = useState<string | null>(null)
 
   const faqItems = [
     { q: t("faq_q1"), a: t("faq_a1") },
@@ -56,9 +19,6 @@ export default function Home() {
 
   useEffect(() => {
     setUserRole(localStorage.getItem("namma_role"))
-    const timer = setTimeout(() => setStatsReady(true), 350)
-    getIncidentStats().then(s => setIncidentCount(s.total)).catch(() => {})
-    return () => clearTimeout(timer)
   }, [])
 
   const signOut = () => {
@@ -67,13 +27,6 @@ export default function Home() {
     localStorage.removeItem("namma_role")
     setUserRole(null)
   }
-
-  const accuracy = useCountUp(992, 1400, statsReady)
-  const latency  = useCountDown(99, 3, 1200, statsReady)
-
-  const accuracyDisplay = `${Math.floor(accuracy / 10)}.${accuracy % 10}%`
-  const latencyDisplay  = `< ${latency}s`
-  const incidentDisplay = incidentCount !== null ? String(incidentCount) : "—"
 
   return (
     <div className="min-h-screen bg-white">
@@ -120,22 +73,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Animated stats strip */}
-        <div className="max-w-6xl mx-auto px-4 pb-5 flex flex-wrap gap-4 sm:gap-8">
-          {[
-            { val: incidentDisplay,  label: t("stat_commuters") },
-            { val: latencyDisplay,   label: t("stat_latency") },
-            { val: accuracyDisplay,  label: t("stat_accuracy") },
-          ].map((s, i, arr) => (
-            <div key={s.label} className="flex items-center gap-4">
-              <div>
-                <p className="text-xl sm:text-2xl font-bold text-gov-900 tabular-nums">{s.val}</p>
-                <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">{s.label}</p>
-              </div>
-              {i < arr.length - 1 && <div className="hidden sm:block w-px h-8 bg-gray-200" />}
-            </div>
-          ))}
-        </div>
       </section>
 
       {/* ── ROLE SELECTION / QUICK ACCESS ──────────────────────────── */}
