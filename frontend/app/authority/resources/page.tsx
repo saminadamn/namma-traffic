@@ -181,14 +181,14 @@ export default function Resources() {
       <div className="gov-card p-3 sm:p-4">
         <p className="text-sm font-medium text-gov-900 mb-3">Per-incident deployment plan</p>
         <div className="overflow-x-auto -mx-3 sm:mx-0">
-          <table className="w-full text-xs min-w-[600px]">
+          <table className="w-full text-xs min-w-[340px]">
             <thead>
               <tr className="text-left text-gray-400 border-b border-gray-100">
                 <th className="py-2 font-medium pl-3 sm:pl-0">Incident · Allocation basis</th>
-                <th className="py-2 font-medium">Location</th>
+                <th className="py-2 font-medium hidden sm:table-cell">Location</th>
                 <th className="py-2 font-medium text-center">Officers</th>
                 <th className="py-2 font-medium text-center">Barricades</th>
-                <th className="py-2 font-medium text-center">Radius</th>
+                <th className="py-2 font-medium text-center hidden sm:table-cell">Radius</th>
                 <th className="py-2 font-medium text-right pr-3 sm:pr-0">Action</th>
               </tr>
             </thead>
@@ -232,10 +232,10 @@ export default function Resources() {
                           </p>
                         )}
                       </td>
-                      <td className="py-2.5 text-gray-500 max-w-[160px] truncate">{inc.address}</td>
+                      <td className="py-2.5 text-gray-500 max-w-[160px] truncate hidden sm:table-cell">{inc.address}</td>
                       <td className="py-2.5 text-center font-medium">{p.officers}</td>
                       <td className="py-2.5 text-center font-medium">{p.barricades}</td>
-                      <td className="py-2.5 text-center text-gray-500">{p.radius}</td>
+                      <td className="py-2.5 text-center text-gray-500 hidden sm:table-cell">{p.radius}</td>
                       <td className="py-2.5 text-right pr-3 sm:pr-0">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
