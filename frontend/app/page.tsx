@@ -3,6 +3,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import PublicHeader from "@/components/PublicHeader"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { getIncidentStats } from "@/lib/api"
 
 function useCountUp(to: number, duration: number, enabled: boolean) {
   const [val, setVal] = useState(0)
@@ -40,9 +41,10 @@ function useCountDown(from: number, to: number, duration: number, enabled: boole
 
 export default function Home() {
   const { t } = useLanguage()
-  const [faqOpen, setFaqOpen] = useState<number | null>(null)
-  const [statsReady, setStatsReady] = useState(false)
-  const [userRole, setUserRole] = useState<string | null>(null)
+  const [faqOpen,        setFaqOpen]        = useState<number | null>(null)
+  const [statsReady,     setStatsReady]     = useState(false)
+  const [userRole,       setUserRole]       = useState<string | null>(null)
+  const [incidentCount,  setIncidentCount]  = useState<number | null>(null)
 
   const faqItems = [
     { q: t("faq_q1"), a: t("faq_a1") },
@@ -55,6 +57,7 @@ export default function Home() {
   useEffect(() => {
     setUserRole(localStorage.getItem("namma_role"))
     const timer = setTimeout(() => setStatsReady(true), 350)
+    getIncidentStats().then(s => setIncidentCount(s.total)).catch(() => {})
     return () => clearTimeout(timer)
   }, [])
 
@@ -65,14 +68,12 @@ export default function Home() {
     setUserRole(null)
   }
 
-  // Animated counters: accuracy 0→992 (display as 99.2%), latency 999→3 (display as <Xs)
   const accuracy = useCountUp(992, 1400, statsReady)
-  const latency = useCountDown(99, 3, 1200, statsReady)
-  const commuters = useCountUp(24, 1300, statsReady)
+  const latency  = useCountDown(99, 3, 1200, statsReady)
 
   const accuracyDisplay = `${Math.floor(accuracy / 10)}.${accuracy % 10}%`
-  const latencyDisplay = `< ${latency}s`
-  const commutersDisplay = `${(commuters / 10).toFixed(1)}M+`
+  const latencyDisplay  = `< ${latency}s`
+  const incidentDisplay = incidentCount !== null ? String(incidentCount) : "—"
 
   return (
     <div className="min-h-screen bg-white">
@@ -122,7 +123,7 @@ export default function Home() {
         {/* Animated stats strip */}
         <div className="max-w-6xl mx-auto px-4 pb-5 flex flex-wrap gap-4 sm:gap-8">
           {[
-            { val: commutersDisplay, label: t("stat_commuters") },
+            { val: incidentDisplay,  label: t("stat_commuters") },
             { val: latencyDisplay,   label: t("stat_latency") },
             { val: accuracyDisplay,  label: t("stat_accuracy") },
           ].map((s, i, arr) => (
