@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="docs/logo.png" alt="Namma Traffic" width="320" />
+<img src="docs/logo.png" alt="Namma AI" width="320" />
 
-# Namma Traffic
+# Namma AI
 ### Smarter Roads. Safer Journeys.
 
 **Traffic Intelligence Platform for Bengaluru**
