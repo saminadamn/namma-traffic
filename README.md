@@ -15,9 +15,9 @@
 
 ## Overview
 
-Namma Traffic helps Bengaluru Traffic Police shift from reactive patrol to proactive, data-driven enforcement. It predicts incident severity and road-closure probability using a CatBoost ML model, recommends officer and barricade deployment, generates diversion routes, surfaces hotspots on a live heatmap, and lets citizens report incidents directly to authorities.
+Namma AI helps Bengaluru Traffic Police shift from reactive patrol to proactive, data-driven enforcement. It predicts incident severity and road-closure probability using a CatBoost ML model, recommends officer and barricade deployment, generates diversion routes, surfaces hotspots on a live heatmap, and lets citizens report incidents directly to authorities.
 
-Built for **Smart India Hackathon 2024** · Next.js 14 · FastAPI · PostgreSQL · CatBoost
+Next.js 14 · FastAPI · PostgreSQL · CatBoost
 
 ---
 
