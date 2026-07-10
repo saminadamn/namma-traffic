@@ -33,6 +33,9 @@ Next.js 14 · FastAPI · PostgreSQL · CatBoost
 | Maps & weather | OpenStreetMap tiles, Open-Meteo API (both free, no key needed) |
 
 ---
+<img width="1920" height="1080" alt="Why Do We Need Namma Traffic" src="https://github.com/user-attachments/assets/af969a8d-ab4b-4f88-a9b4-3bacce3e0c48" />
+
+---
 
 ## Run Locally
 
