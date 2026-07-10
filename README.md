@@ -20,6 +20,10 @@ Namma AI helps Bengaluru Traffic Police shift from reactive patrol to proactive,
 Next.js 14 · FastAPI · PostgreSQL · CatBoost
 
 ---
+## Presentation
+[Uploading Why Do We Need Namma Traffic (1).pdf…]()
+
+---
 
 ## Tech Stack
 
