@@ -218,18 +218,6 @@ Response:
 
 Full interactive docs for all endpoints are available at `/docs` (Swagger UI) once the backend is running.
 
----
-
-## Roadmap
-
-| Item | Description |
-|---|---|
-| Redis caching | Cache hotspot and prediction queries to reduce database load |
-| Kubernetes deployment | Enable horizontal scaling for production workloads |
-| Kafka event streaming | Support real-time ingestion of incident events |
-| Live traffic feeds | Integrate real camera and sensor data sources |
-
----
 
 ## Deploy
 
