@@ -21,8 +21,7 @@ Next.js 14 · FastAPI · PostgreSQL · CatBoost
 
 ---
 ## Presentation
-[Uploading Why Do We Need Namma Traffic (1).pdf…]()
-
+[Link](https://github.com/saminadamn/namma-traffic/blob/main/Why%20Do%20We%20Need%20Namma%20Traffic%20(1).pdf)
 ---
 
 ## Tech Stack
