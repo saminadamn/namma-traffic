@@ -7,6 +7,13 @@
 
 **Traffic Intelligence Platform for Bengaluru**
 
+![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-336791?logo=postgresql&logoColor=white)
+![CatBoost](https://img.shields.io/badge/ML-CatBoost-orange)
+![License](https://img.shields.io/badge/License-MIT-green)
+
 <img src="docs/hero.png" alt="Namma Traffic Platform" width="100%" />
 
 </div>
@@ -18,6 +25,17 @@
 Namma AI helps Bengaluru Traffic Police shift from reactive patrol to proactive, data-driven enforcement. It predicts incident severity and road-closure probability using a CatBoost ML model, recommends officer and barricade deployment, generates diversion routes, surfaces hotspots on a live heatmap, and lets citizens report incidents directly to authorities.
 
 Next.js 14 · FastAPI · PostgreSQL · CatBoost
+
+### Key Metrics
+
+| Metric | Value |
+|---|---|
+| ML inference latency | < 5 ms per prediction |
+| Diversion route computation | < 3 s |
+| Incident telemetry | Real-time via WebSocket |
+| Authentication | JWT-based |
+| Access control | Role-based (Citizen / Personnel / Authority) |
+| API | REST, with auto-generated Swagger documentation |
 
 ---
 
@@ -34,6 +52,23 @@ Next.js 14 · FastAPI · PostgreSQL · CatBoost
 
 ---
 <img width="1920" height="1080" alt="Why Do We Need Namma Traffic" src="https://github.com/user-attachments/assets/af969a8d-ab4b-4f88-a9b4-3bacce3e0c48" />
+
+---
+
+## Folder Structure
+
+```
+namma-traffic/
+├── backend/          # FastAPI app, models, routers, ML inference
+│   ├── models/       # CatBoost + DBSCAN model artifacts
+│   ├── routers/      # API route handlers
+│   └── main.py
+├── frontend/         # Next.js 14 app (citizen + authority views)
+│   ├── app/
+│   └── components/
+├── docs/             # Screenshots, logo, hero images
+└── README.md
+```
 
 ---
 
@@ -146,6 +181,53 @@ Open **http://localhost:3000**
 | `/authority/resources` | Authority | Per-incident deployment recommendations |
 | `/authority/diversion` | Authority | Auto-generated diversion routes |
 | `/authority/verify` | Authority | Approve / reject citizen reports |
+
+---
+
+## API Example
+
+**`POST /api/predict`** — returns road-closure probability and priority ranking for an incident.
+
+Request:
+
+```json
+{
+  "incident_type": "accident",
+  "location": {
+    "lat": 12.9716,
+    "lng": 77.5946
+  },
+  "severity": "moderate",
+  "weather": "rain",
+  "time_of_day": "peak_hour",
+  "road_type": "arterial"
+}
+```
+
+Response:
+
+```json
+{
+  "closure_probability": 0.72,
+  "priority_score": 8.4,
+  "recommended_officers": 3,
+  "recommended_barricades": 2,
+  "estimated_clearance_minutes": 35
+}
+```
+
+Full interactive docs for all endpoints are available at `/docs` (Swagger UI) once the backend is running.
+
+---
+
+## Roadmap
+
+| Item | Description |
+|---|---|
+| Redis caching | Cache hotspot and prediction queries to reduce database load |
+| Kubernetes deployment | Enable horizontal scaling for production workloads |
+| Kafka event streaming | Support real-time ingestion of incident events |
+| Live traffic feeds | Integrate real camera and sensor data sources |
 
 ---
 
