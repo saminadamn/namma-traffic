@@ -5,7 +5,7 @@ THREE deliberate design decisions worth reading before extending this file:
 
 1. This module lives in `db_models/`, NOT `models/`. `models/` already
    exists in this project and holds serialized ML artifacts
-   (lgbm_model.pkl, xgb_model.pkl — see config.py:model_path and
+   (catboost_model.pkl, xgb_model.pkl — see config.py:model_path and
    services/model_service.py). Reusing that name for ORM classes would
    create a real "which `models` are we talking about" ambiguity in
    every future PR description and import statement. Worth a slightly

@@ -11,18 +11,20 @@ predict screen.
 CONFIDENCE SCORE — read before changing: this is a heuristic data-
 coverage confidence ("how much historical data backs this specific
 corridor/zone/event combination"), not a statistically calibrated model
-confidence. A calibrated confidence interval would require a real
-trained model with isotonic/Platt calibration — out of scope here since
-no trained model is shipped in this repo (see model_service.py's
-fallback). When real models ARE loaded, confidence instead reflects
-ensemble agreement between LightGBM and XGBoost, which is a real,
+confidence. A calibrated confidence interval would require isotonic or
+Platt calibration on top of the shipped models — out of scope here. Note
+model_service falls back to a heuristic whenever the .pkl files fail to
+load, in which case this reports coverage confidence rather than model
+confidence. When the models ARE loaded, confidence instead reflects
+ensemble agreement between CatBoost and XGBoost, which is a real,
 defensible uncertainty signal (the two models disagreeing is a genuine
 reason to trust the prediction less).
 """
 import math
 
 from services.model_service import (
-    CORRIDOR_HISTORY, EVENT_TYPE_HISTORY, ZONE_HISTORY, _fallback_breakdown,
+    CATBOOST_WEIGHT, CORRIDOR_HISTORY, EVENT_TYPE_HISTORY, XGB_WEIGHT,
+    ZONE_HISTORY, _fallback_breakdown,
 )
 
 FACTOR_LABELS = {
@@ -46,20 +48,20 @@ def _heuristic_confidence(ev) -> int:
     return min(confidence, 95)
 
 
-def _ensemble_confidence(lgbm_p: float, xgb_p: float) -> int:
+def _ensemble_confidence(catboost_p: float, xgb_p: float) -> int:
     """Used only when real models are loaded — agreement between the two
     ensemble members as an uncertainty proxy. Wide disagreement = lower
     confidence, even if both individually look certain."""
-    disagreement = abs(lgbm_p - xgb_p)
+    disagreement = abs(catboost_p - xgb_p)
     return max(50, round(95 - disagreement * 100))
 
 
 def explain(model_service, ev) -> dict:
     if model_service.is_loaded:
         X = model_service._features(ev)
-        lgbm_p = float(model_service.lgbm.predict_proba(X)[0][1])
+        catboost_p = float(model_service.catboost.predict_proba(X)[0][1])
         xgb_p = float(model_service.xgb.predict_proba(X)[0][1])
-        score = int((0.55 * lgbm_p + 0.45 * xgb_p) * 100)
+        score = int((CATBOOST_WEIGHT * catboost_p + XGB_WEIGHT * xgb_p) * 100)
         sv = model_service.explainer.shap_values(X)
         sv = sv[1] if isinstance(sv, list) else sv
         shap_arr = sv[0]
@@ -73,7 +75,7 @@ def explain(model_service, ev) -> dict:
                 "direction": "increases_risk" if v > 0 else "decreases_risk",
             })
         factors.sort(key=lambda f: f["contribution_pct"], reverse=True)
-        confidence = _ensemble_confidence(lgbm_p, xgb_p)
+        confidence = _ensemble_confidence(catboost_p, xgb_p)
         method = "shap_tree_explainer"
     else:
         breakdown = _fallback_breakdown(ev)

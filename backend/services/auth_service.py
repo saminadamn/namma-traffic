@@ -129,7 +129,16 @@ def refresh_tokens(db, raw_refresh_token: str) -> dict:
             detail="Refresh token reuse detected — all sessions revoked, please log in again",
         )
 
-    if stored.expires_at < datetime.now(timezone.utc):
+    # expires_at is always written as UTC-aware (core/security.py), but
+    # DateTime(timezone=True) only round-trips the offset on Postgres —
+    # SQLite hands the value back naive, and comparing the two raises
+    # TypeError. Re-attach UTC when it comes back without a tzinfo so this
+    # works identically on both backends.
+    expires_at = stored.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    if expires_at < datetime.now(timezone.utc):
         raise HTTPException(status_code=401, detail="Refresh token expired")
 
     stored.revoked = True

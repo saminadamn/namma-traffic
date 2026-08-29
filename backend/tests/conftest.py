@@ -30,6 +30,7 @@ from sqlalchemy.pool import StaticPool
 
 from core.database import Base, get_db
 from db_models.user import AuditLog, Permission, RefreshToken, Role, User, role_permissions, user_roles
+from routers import auth as auth_router
 import main
 
 AUTH_TABLES = [
@@ -58,12 +59,18 @@ def db_session():
     TestingSessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
     session = TestingSessionLocal()
 
+    # Permissions are shared across roles ("incident:create" belongs to both
+    # citizen and field_officer), and `permissions.code` is unique. The session
+    # is autoflush=False, so querying for an existing row would not see one
+    # added earlier in this same loop — build each Permission once here and
+    # reuse the object instead.
+    permissions: dict[str, Permission] = {}
     for role_name, perm_codes in TEST_ROLE_PERMISSIONS.items():
         role = Role(name=role_name)
         for code in perm_codes:
-            perm = session.query(Permission).filter_by(code=code).first()
+            perm = permissions.get(code)
             if perm is None:
-                perm = Permission(code=code)
+                perm = permissions[code] = Permission(code=code)
                 session.add(perm)
             role.permissions.append(perm)
         session.add(role)
@@ -81,7 +88,21 @@ def client(db_session):
     def _override_get_db():
         yield db_session
 
+    # /api/auth/register is capped at 5/minute and /api/auth/login at
+    # 10/minute. Every test here shares one client host, so the limiter keys
+    # them all to the same bucket and the whole suite trips the cap partway
+    # through — failures that say nothing about the auth logic under test.
+    # Disable both limiters for the duration of a test; the production limits
+    # themselves are unchanged.
+    limiters = [main.limiter, auth_router.limiter]
+    for lim in limiters:
+        lim.enabled = False
+
     main.app.dependency_overrides[get_db] = _override_get_db
-    with TestClient(main.app) as test_client:
-        yield test_client
-    main.app.dependency_overrides.clear()
+    try:
+        with TestClient(main.app) as test_client:
+            yield test_client
+    finally:
+        main.app.dependency_overrides.clear()
+        for lim in limiters:
+            lim.enabled = True

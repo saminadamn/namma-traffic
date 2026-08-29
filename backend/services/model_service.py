@@ -1,8 +1,12 @@
+import logging
+
 import joblib
 import numpy as np
 import pandas as pd
 from datetime import datetime
 from config import get_settings
+
+logger = logging.getLogger(__name__)
 
 CORRIDOR_HISTORY = {
     "Hosur Road": (0.087, 64), "ORR North": (0.071, 52), "Bellary Road": (0.064, 43),
@@ -26,6 +30,12 @@ CLEAN_FEATURES = [
 ]
 
 RAIN_RISK = {"clear": 0, "light_rain": 8, "rain": 12, "heavy_rain": 20}
+
+# Blend weights for the ensemble. Defined here and imported by
+# explain_service so the score it explains always matches the score
+# predict() returns. They must sum to 1.0.
+CATBOOST_WEIGHT = 0.55
+XGB_WEIGHT = 0.45
 
 def _fallback_breakdown(ev):
     """Decomposes the fallback heuristic's score into its components.
@@ -67,8 +77,21 @@ def _fallback_breakdown(ev):
 
 
 class ModelService:
+    """Risk scorer for the authority "predict" page.
+
+    Blends two gradient-boosted classifiers (CatBoost 0.55 / XGBoost 0.45)
+    and explains the result with SHAP. Models are loaded lazily on the
+    first predict() so the API can boot without them; if loading fails for
+    any reason the service silently degrades to _fallback(), a transparent
+    heuristic that needs no model files at all.
+
+    Note this is a *separate* pipeline from services/catboost_service.py,
+    which serves the native .cbm closure/priority models out of ml_models/.
+    This one serves the joblib .pkl ensemble out of models/.
+    """
+
     def __init__(self):
-        self.lgbm = self.xgb = self.tfidf = self.explainer = None
+        self.catboost = self.xgb = self.tfidf = self.explainer = None
         self.is_loaded = False
         self._load_attempted = False
         self.settings = get_settings()
@@ -76,14 +99,14 @@ class ModelService:
     def load(self):
         try:
             import shap
-            self.lgbm = joblib.load(self.settings.model_path)
+            self.catboost = joblib.load(self.settings.model_path)
             self.xgb = joblib.load(self.settings.xgb_model_path)
             self.tfidf = joblib.load(self.settings.tfidf_path)
-            self.explainer = shap.TreeExplainer(self.lgbm)
+            self.explainer = shap.TreeExplainer(self.catboost)
             self.is_loaded = True
-            print("Models loaded")
-        except Exception as e:
-            print(f"Models not loaded ({e}) — using fallback scorer")
+            logger.info("Prediction models loaded")
+        except Exception as exc:
+            logger.warning("Prediction models unavailable (%s) — using fallback scorer", exc)
             self.is_loaded = False
 
     def _ensure_loaded(self):
@@ -120,7 +143,10 @@ class ModelService:
         self._ensure_loaded()
         X = self._features(ev)
         if self.is_loaded:
-            p = 0.55 * float(self.lgbm.predict_proba(X)[0][1]) + 0.45 * float(self.xgb.predict_proba(X)[0][1])
+            p = (
+                CATBOOST_WEIGHT * float(self.catboost.predict_proba(X)[0][1])
+                + XGB_WEIGHT * float(self.xgb.predict_proba(X)[0][1])
+            )
             score = int(p * 100)
             sv = self.explainer.shap_values(X)
             sv = sv[1] if isinstance(sv, list) else sv
