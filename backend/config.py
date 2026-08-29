@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
 class Settings(BaseSettings):
@@ -34,8 +34,7 @@ class Settings(BaseSettings):
     # ── Redis (optional — Upstash free tier for token blacklist + perm cache) ──
     redis_url: str = ""  # e.g. rediss://default:xxx@host:6379 (Upstash free tier)
 
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(env_file=".env")
 
 @lru_cache
 def get_settings() -> Settings:

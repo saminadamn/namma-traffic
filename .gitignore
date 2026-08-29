@@ -26,18 +26,21 @@ frontend/.env.local
 frontend/.env.production
 frontend/css.d.ts
 frontend/tsconfig.tsbuildinfo
-namma-traffic/frontend/css.d.ts
-namma-traffic/frontend/tsconfig.tsbuildinfo
 
 # ── OS / Editor ────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 .vscode/settings.json
 .idea/
+.claude/
 
 # ── CatBoost training artifacts (keep actual .pkl models) ───────
 backend/catboost_info/
 *.cbm
+# ...but the two served models under ml_models/ ARE tracked. Without this
+# negation a retrained closure_model.cbm / priority_model.cbm is silently
+# skipped by `git add` and never ships.
+!backend/ml_models/*.cbm
 
 # ── Logs ───────────────────────────────────────────────────────
 *.log

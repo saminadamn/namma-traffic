@@ -135,7 +135,7 @@ CLOUDINARY_API_SECRET=
 Open a second terminal:
 
 ```bash
-cd frontend          # or: cd namma-traffic/frontend
+cd frontend
 npm install
 npm run dev
 ```

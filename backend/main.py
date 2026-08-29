@@ -14,7 +14,10 @@ from slowapi.errors import RateLimitExceeded
 
 from alembic.config import Config as AlembicConfig
 from alembic import command as alembic_command
-from routers import api, auth, admin, websocket, explain, simulate, whatif, command_center, demo, advisory, translate, routing, ml_predict, diversion
+from routers import (
+    admin, advisory, api, auth, command_center, demo, diversion, explain,
+    ml_predict, routing, simulate, translate, websocket, whatif,
+)
 from services.model_service import ModelService
 from config import get_settings
 
@@ -133,34 +136,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(api.predict_router,   prefix="/api/predict",   tags=["Predict"])
-app.include_router(api.incidents_router, prefix="/api/incidents", tags=["Incidents"])
-app.include_router(api.reports_router,   prefix="/api/reports",   tags=["Reports"])
-app.include_router(api.heatmap_router,   prefix="/api/heatmap",   tags=["Heatmap"])
-app.include_router(api.analytics_router, prefix="/api/analytics", tags=["Analytics"])
-app.include_router(api.weather_router,   prefix="/api/weather",   tags=["Weather"])
+# ── Core traffic API ──────────────────────────────────────────────────────────
+app.include_router(api.predict_router,    prefix="/api/predict",         tags=["Predict"])
+app.include_router(api.incidents_router,  prefix="/api/incidents",       tags=["Incidents"])
+app.include_router(api.reports_router,    prefix="/api/reports",         tags=["Reports"])
+app.include_router(api.heatmap_router,    prefix="/api/heatmap",         tags=["Heatmap"])
+app.include_router(api.analytics_router,  prefix="/api/analytics",       tags=["Analytics"])
+app.include_router(api.weather_router,    prefix="/api/weather",         tags=["Weather"])
 
-# Added for Priority 1 — auth/RBAC. Existing routers above are untouched.
-app.include_router(auth.router,  prefix="/api/auth",  tags=["Auth"])
-app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
+# ── Auth / RBAC ───────────────────────────────────────────────────────────────
+app.include_router(auth.router,           prefix="/api/auth",            tags=["Auth"])
+app.include_router(admin.router,          prefix="/api/admin",           tags=["Admin"])
 
-# Added for Priority 2 — real-time incident push.
-app.include_router(websocket.router, prefix="/ws", tags=["WebSocket"])
+# ── Real-time incident push ───────────────────────────────────────────────────
+app.include_router(websocket.router,      prefix="/ws",                  tags=["WebSocket"])
 
-# Added for the SIH enhancement sprint (Features 1-3, 6-7). Feature 4
-# (severity scoring) and Feature 5 (priority ranking) needed no new
-# router — they're integrated into the existing incident_service /
-# incidents_router instead. See docs for the full feature-to-file map.
-app.include_router(explain.router,        prefix="/prediction/explain", tags=["Explainable AI"])
-app.include_router(simulate.router,       prefix="/simulate-event",     tags=["Event Simulator"])
-app.include_router(whatif.router,         prefix="/what-if",            tags=["What-If Analysis"])
-app.include_router(command_center.router, prefix="/command-center",     tags=["Command Center"])
-app.include_router(demo.router,           prefix="/generate-demo-data", tags=["Demo Data"])
-app.include_router(advisory.router,       prefix="/api/advisory",       tags=["Advisory"])
+# ── Decision-support features ─────────────────────────────────────────────────
+# Severity scoring and priority ranking have no router of their own; they run
+# inside incident_service behind the /api/incidents routes above.
+# See docs/ARCHITECTURE.md for the full feature-to-file map.
+app.include_router(explain.router,        prefix="/prediction/explain",  tags=["Explainable AI"])
+app.include_router(simulate.router,       prefix="/simulate-event",      tags=["Event Simulator"])
+app.include_router(whatif.router,         prefix="/what-if",             tags=["What-If Analysis"])
+app.include_router(command_center.router, prefix="/command-center",      tags=["Command Center"])
+app.include_router(demo.router,           prefix="/generate-demo-data",  tags=["Demo Data"])
+app.include_router(advisory.router,       prefix="/api/advisory",        tags=["Advisory"])
 app.include_router(translate.router,      prefix="/api/translate-batch", tags=["Translation"])
 app.include_router(routing.router,        prefix="/api/route",           tags=["Safe Route"])
-app.include_router(ml_predict.router,    prefix="/api/ml-predict",      tags=["Authority ML Predict"])
-app.include_router(diversion.router,     prefix="/api",                 tags=["Diversion Planning Engine"])
+app.include_router(ml_predict.router,     prefix="/api/ml-predict",      tags=["Authority ML Predict"])
+app.include_router(diversion.router,      prefix="/api",                 tags=["Diversion Planning Engine"])
 
 @app.exception_handler(Exception)
 async def _global_exception_handler(request: Request, exc: Exception):
